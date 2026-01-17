@@ -10,62 +10,65 @@ To display the map, simply insert the shortcode in any markdown file. The map ac
 {{< world-map >}}
 ```
 
-### How it works
-1. The module scans your taxonomy terms (e.g. `content/destinationen/albanien/_index.md`).
-2. It matches the term title (e.g., "Albanien") to an ISO code using `data/country_map.yaml` (optional custom mapping) or `data/iso_map.json` (built-in English names).
-3. If a match is found (e.g. "AL"), that country is colored on the map.
-4. Clicking the country navigates to the taxonomy term page.
-
------
+### Key Features
+- **Responsive & Fluid**: The map is built to be strictly fluid. It expands to fill the available width (up to 1280px on desktop) and centers itself in the viewport, ensuring safe margins on all devices.
+- **Interactive**: Support for Pan/Zoom (Mouse & Touch) and Tooltips.
+- **Automatic Matching**: Matches taxonomy terms (e.g., "Albanien", "Turkey") to SVG ISO codes.
 
 ## 🌍 Configuration
 
-Required data files in your project or the module default:
+Required data files in your project (or use the module's defaults):
 
-### 1. `data/country_map.yaml` (Optional but Recommended)
+### 1. `data/country_map.yaml` (Recommended for Mapping)
 Use this to map your specific taxonomy term titles (especially if they are not English) to ISO-2 codes.
-Example:
+**The module now includes a comprehensive default set**, but you can override it in your project.
 
+Example:
 ```yaml
 Albanien: "AL"
 Griechenland: "GR"
 Turkey: "TR"
 ```
 
-### 2. `data/iso_map.json` (Included)
-Contains standard English Name -> ISO mappings.
-
------
+### 2. `data/iso_map.json` (Internal)
+Contains standard English Name -> ISO mappings. Used as a fallback.
 
 ## 🎨 Customization
 
-The map is styled via CSS which is embedded in the shortcode, but scoped to `.travel-map-wrapper`. You can override these styles in your site's CSS.
+### i18n (Translations)
+The module supports multilingual labels for the "Visited" text in tooltips.
+Define the `world_map_visited` key in your site's `i18n` files:
+
+`i18n/de.toml`:
+```toml
+[world_map_visited]
+other = "BEREIST"
+```
+
+`i18n/en.toml`:
+```toml
+[world_map_visited]
+other = "Visited"
+```
+*Fallback: If not defined, it defaults to `visited` or "(Visited)".*
 
 ### CSS Classes
 
 | Class | Description |
 | :--- | :--- |
-| `.travel-map-wrapper` | The main container. Default height is `600px`. |
+| `.travel-map-wrapper` | The main container. **Do not set fixed widths**; it is designed to be fluid. |
+| `.map-btn` | Zoom buttons. Styled with glassmorphism (transparent/blur). |
 | `.visited-path` | SVG Path class for visited countries. |
-| `#tt` | The tooltip element. |
 
-### Example Override
-
- To make the map smaller:
-
-```css
-.travel-map-wrapper {
-    height: 400px !important;
-}
-```
+### Layout Behavior
+The map uses a **Smart Fluid Breakout** strategy:
+- **Mobile**: 100% width of the content container.
+- **Desktop**: Expands up to 1280px and centers in the viewport, breaking out of narrow text columns if necessary.
 
 -----
 
 ## 💡 Advanced behavior
 
-### Mobile Support
-The map supports **Pinch-to-Zoom** and **Pan** gestures natively on mobile devices. It captures pointer events to provide a smooth "Google Maps-like" experience without interfering with page scrolling (unless you are dragging the map).
-
 ### Performance
-The rendering uses `requestAnimationFrame` and CSS transforms (`translate3d`) to ensure 60fps performance even on lower-end devices.
+The rendering uses `requestAnimationFrame` and CSS transforms (`translate3d`) to ensure 60fps performance even on lower-end devices. Assets are lightweight SVGs.
 
