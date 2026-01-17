@@ -12,6 +12,9 @@ Map Preview: [go-offroad.ch](https://go-offroad.ch)
 * **🎨 Simple & Clean:** Vector-based (SVG) rendering that looks sharp at any zoom level.
 * **🔒 Privacy:** Self-hosted SVG, no external tracking or API calls (Google Maps etc.).
 
+## Demo
+A live demo is available at [go-offroad.ch/map](https://go-offroad.ch/map).
+
 ## 📦 Installation
 
 This project is packaged as a Hugo Module.

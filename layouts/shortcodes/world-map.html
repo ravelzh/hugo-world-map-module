@@ -24,28 +24,56 @@
 <style>
     .travel-map-wrapper {
         position: relative;
+        /* Enforce strict aspect ratio (2000:857) for fluid scaling */
+        aspect-ratio: 2000 / 857;
+        /* Fill the available content width completely */
         width: 100%;
-        height: 600px;
-        /* Default height */
-        max-height: 80vh;
-        /* Responsive constraint */
+        height: auto;
+        margin: 0 auto;
+
         background: #f0f9ff;
         overflow: hidden;
         border: 1px solid #ccc;
         font-family: system-ui, -apple-system, sans-serif;
-        /* Prevent default browser gestures on the map canvas */
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
         border-radius: 8px;
-        /* Slight polish */
     }
 
+    /* Transparent Buttons (Glassmorphism) - Kept as requested */
+    .map-btn {
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: 1px solid rgba(203, 213, 225, 0.6);
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 18px;
+        color: #333;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .map-btn:hover {
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    .map-btn:active {
+        background: #e2e8f0;
+    }
+
+    /* Layout Elements */
     #map-viewport {
         width: 100%;
         height: 100%;
         cursor: grab;
-        /* Force GPU layer without blurring (browser dependent, but transform-style helps) */
         transform-style: preserve-3d;
     }
 
@@ -58,21 +86,17 @@
         height: 100% !important;
         display: block;
         transform-origin: 0 0;
-        /* Crisp edges for vectors */
         shape-rendering: geometricPrecision;
     }
 
-    /* Base Paths */
     path {
         fill: #cbd5e1;
         stroke: white;
         stroke-width: 0.5px;
         vector-effect: non-scaling-stroke;
         transition: fill 0.2s ease;
-        /* Smooth hover effect */
     }
 
-    /* Visited Country Styles */
     .visited-path {
         cursor: pointer;
         opacity: 1 !important;
@@ -81,16 +105,12 @@
     .visited-path:hover {
         filter: brightness(0.85);
         stroke: #333;
-        /* Ensure hovered item is on top (SVG z-index hack usually requires DOM reorder, 
-       but for visual pop brightness is enough. Stroke might clip without reorder) */
     }
 
-    /* Tooltip */
     #tt {
         position: absolute;
         top: 0;
         left: 0;
-        /* Positioned via JS */
         background: rgba(255, 255, 255, 0.95);
         color: #1a1a1a;
         padding: 6px 10px;
@@ -98,14 +118,13 @@
         border-radius: 4px;
         font-weight: 500;
         font-size: 0.9rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         pointer-events: none;
         opacity: 0;
         transition: opacity 0.15s ease;
         z-index: 1000;
         white-space: nowrap;
         transform: translate(10px, 10px);
-        /* Offset from cursor */
     }
 
     #tt.show {
@@ -119,42 +138,17 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-    }
-
-    .map-btn {
-        width: 36px;
-        height: 36px;
-        background: white;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 18px;
-        color: #333;
-        cursor: pointer;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-    }
-
-    .map-btn:hover {
-        background: #f8fafc;
-    }
-
-    .map-btn:active {
-        background: #e2e8f0;
+        z-index: 10;
     }
 </style>
 
-<div class="travel-map-wrapper" id="root">
-    <!-- Data Injection -->
+<div class="travel-map-wrapper" id="root" data-visited-label="{{ i18n " world_map_visited" | default (i18n "visited" |
+    default "(Visited)" ) }}">
     <div id="d-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
     <div id="d-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
     <div id="d-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
 
     <div id="map-viewport">
-        <!-- SVG Injected directly -->
         {{ $svg := resources.Get "images/world.svg" }}
         {{ if $svg }}
         {{ $svg.Content | safeHTML }}
@@ -173,33 +167,21 @@
 
 <script>
     (function () {
-        // --- State ---
-        const state = {
-            scale: 1,
-            x: 0,
-            y: 0,
-            isDragging: false
-        };
-
-        // Configuration
-        const MIN_SCALE = 1;
-        const MAX_SCALE = 20;
+        const state = { scale: 1, x: 0, y: 0, isDragging: false };
+        const MIN_SCALE = 1, MAX_SCALE = 20;
         const COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
 
-        // DOM Elements
         const root = document.getElementById('root');
         const viewport = document.getElementById('map-viewport');
         const svgLayer = viewport.querySelector('svg');
         const tt = document.getElementById('tt');
 
-        if (!svgLayer) return; // Guard logic
+        if (!svgLayer) return;
 
-        // --- Init SVG ---
         if (!svgLayer.hasAttribute('viewBox')) svgLayer.setAttribute('viewBox', '0 0 2000 857');
         svgLayer.removeAttribute('width');
         svgLayer.removeAttribute('height');
 
-        // --- Data Parsing ---
         let visited = {}, names = {}, isos = {};
         try {
             visited = JSON.parse(document.getElementById('d-visit').dataset.json);
@@ -207,12 +189,9 @@
             isos = JSON.parse(document.getElementById('d-iso').dataset.json);
         } catch (e) { console.error("Map Data Error:", e); }
 
-        // --- Colorization Logic ---
         viewport.querySelectorAll('path').forEach(p => {
             let iso = p.id?.length === 2 ? p.id.toUpperCase() : null;
             let n = p.getAttribute('name');
-
-            // Name normalization/guessing
             if (!n && !iso) {
                 const cls = p.getAttribute('class') || "";
                 if (cls.length > 2) n = cls.replace("land", "").trim();
@@ -220,12 +199,10 @@
             if (n) n = n.replace(/_/g, " ").trim();
             if (n && !iso) iso = names[n];
 
-            // Metadata for Toodtip
             let disp = n || iso;
             if (iso && isos[iso]) disp = isos[iso];
             p.dataset.disp = disp || "";
 
-            // Styling Visited
             if (iso && visited[iso]) {
                 p.classList.add('visited-path');
                 const hash = (iso || "x").split("").reduce((a, b) => a + b.charCodeAt(0), 0);
@@ -235,219 +212,159 @@
             }
         });
 
-        // --- Rendering ---
         let rafId = null;
-        function requestUpdate() {
-            if (!rafId) rafId = requestAnimationFrame(render);
-        }
-
+        function requestUpdate() { if (!rafId) rafId = requestAnimationFrame(render); }
         function render() {
-            // Apply transform to SVG
             svgLayer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
             rafId = null;
         }
 
-        // --- Interaction Math ---
-        function clamp(val, min, max) {
-            return Math.min(Math.max(val, min), max);
-        }
-
-        // Standard Zoom Function (Center is relative to container)
+        function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
         function zoom(factor, relativeCenterX, relativeCenterY) {
-            // If no center provided, use center of container
             if (relativeCenterX === undefined) {
                 const rect = root.getBoundingClientRect();
                 relativeCenterX = rect.width / 2;
                 relativeCenterY = rect.height / 2;
             }
-
             const oldScale = state.scale;
             const newScale = clamp(oldScale * factor, MIN_SCALE, MAX_SCALE);
             if (newScale === oldScale) return;
-
-            // Calculate world coordinate under the cursor/center
-            // wx = (cursor_x - pan_x) / old_scale
             const wx = (relativeCenterX - state.x) / oldScale;
             const wy = (relativeCenterY - state.y) / oldScale;
-
-            // New Pan to keep wx/wy at the same screen position
-            // pan_new = cursor_x - (wx * new_scale)
             state.x = relativeCenterX - (wx * newScale);
             state.y = relativeCenterY - (wy * newScale);
             state.scale = newScale;
-
             requestUpdate();
         }
 
-        // --- Pointer Events (Mouse & Touch unified) ---
-        const headers = new Map(); // pointerId -> {x, y}
-        let lastDist = 0;
-
-        // We calculate "center" of all pointers
+        const headers = new Map();
+        let lastDist = 0, lastCenter = { x: 0, y: 0 };
         function getCenter(pointers) {
-            let x = 0, y = 0;
-            let count = 0;
-            for (const p of pointers.values()) {
-                x += p.x;
-                y += p.y;
-                count++;
-            }
+            let x = 0, y = 0, count = 0;
+            for (const p of pointers.values()) { x += p.x; y += p.y; count++; }
             return { x: x / count, y: y / count };
         }
-
-        function getDist(p1, p2) {
-            return Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        }
-
-        let lastCenter = { x: 0, y: 0 };
+        function getDist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
 
         function onPointerDown(e) {
             if (e.button !== 0 && e.pointerType === 'mouse') return;
-
             root.setPointerCapture(e.pointerId);
             headers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
             state.isDragging = true;
-
             if (headers.size === 2) {
                 const points = Array.from(headers.values());
                 lastDist = getDist(points[0], points[1]);
             }
-
             lastCenter = getCenter(headers);
         }
         root.addEventListener('pointerdown', onPointerDown);
 
         function onPointerMove(e) {
-            // Tooltip logic (Mouse only usually, but let's keep it generic or check pointerType)
             if (e.pointerType === 'mouse') {
                 const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('path');
                 if (t && (t.dataset.visitedName || t.dataset.disp)) {
                     tt.textContent = t.dataset.visitedName || t.dataset.disp;
-                    if (t.classList.contains('visited-path')) tt.textContent += " (BEREIST)";
+                    if (t.classList.contains('visited-path')) {
+                        const label = root.dataset.visitedLabel || "(Visited)";
+                        tt.textContent += " " + label;
+                    }
                     tt.classList.add('show');
-
                     const rect = root.getBoundingClientRect();
-                    const tx = e.clientX - rect.left + 15;
-                    const ty = e.clientY - rect.top + 15;
-                    tt.style.transform = `translate(${tx}px, ${ty}px)`;
+                    tt.style.transform = `translate(${e.clientX - rect.left + 15}px, ${e.clientY - rect.top + 15}px)`;
                 } else {
                     tt.classList.remove('show');
                 }
             }
-
             if (!headers.has(e.pointerId)) return;
-
-            // Update stored position
             headers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
             const currentCenter = getCenter(headers);
             const dx = currentCenter.x - lastCenter.x;
             const dy = currentCenter.y - lastCenter.y;
-
-            // 1. Apply Pan
             state.x += dx;
             state.y += dy;
-
-            // 2. Apply Zoom (if 2 fingers)
             if (headers.size === 2) {
                 const points = Array.from(headers.values());
                 const currentDist = getDist(points[0], points[1]);
-
                 if (lastDist > 0) {
-                    const scaleFactor = currentDist / lastDist;
-
-                    // Get center relative to container
                     const rect = root.getBoundingClientRect();
-                    const relCx = currentCenter.x - rect.left;
-                    const relCy = currentCenter.y - rect.top;
-
-                    // We want to zoom AROUND the current pinch center.
-                    // But we ALREADY moved the pan by (dx, dy) above, effectively moving the world
-                    // along with the fingers properly.
-                    // The zoom however needs to expand relative to that new center.
-
-                    // Use the zoom helper logic but we handle 'state update' carefully
-                    // current scale is state.scale (already panned)
-                    // We want to apply scale factor centered at relCx, relCy
-
-                    // Standard zoom logic again:
-                    // We need to 'undo' the pan effect if we use the generic function? 
-                    // No, generic function assumes current state x/y is the starting point.
-                    // Correct.
-
-                    zoom(scaleFactor, relCx, relCy);
+                    zoom(currentDist / lastDist, currentCenter.x - rect.left, currentCenter.y - rect.top);
                 }
                 lastDist = currentDist;
             } else {
-                // Just request update for pan
                 requestUpdate();
             }
-
             lastCenter = currentCenter;
         }
         root.addEventListener('pointermove', onPointerMove);
 
         function onPointerUp(e) {
             headers.delete(e.pointerId);
-            root.releasePointerCapture(e.pointerId);
-
+            try { root.releasePointerCapture(e.pointerId); } catch (err) { }
+            const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
             if (headers.size === 0) {
                 state.isDragging = false;
+                if (dist < 10) {
+                    const target = document.elementFromPoint(e.clientX, e.clientY);
+                    const t = target?.closest('.visited-path');
+                    if (t && t.dataset.link) window.location.href = t.dataset.link;
+                }
             } else {
                 lastCenter = getCenter(headers);
                 lastDist = 0;
             }
         }
         root.addEventListener('pointerup', onPointerUp);
-        root.addEventListener('pointercancel', e => {
-            headers.delete(e.pointerId);
-            state.isDragging = false;
-        });
-
-        // --- Wheel Zoom ---
+        root.addEventListener('pointercancel', e => { headers.delete(e.pointerId); state.isDragging = false; });
         root.addEventListener('wheel', e => {
             e.preventDefault();
             const rect = root.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const factor = e.deltaY > 0 ? 0.9 : 1.1;
-            zoom(factor, mouseX, mouseY);
+            zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
         }, { passive: false });
 
-        // --- Buttons ---
         document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.3));
         document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.7));
 
-        // --- Click Navigation ---
         let startX = 0, startY = 0;
         root.addEventListener('pointerdown', e => {
-            // Only track primary or if first pointer
-            if (e.isPrimary || headers.size === 0) {
-                startX = e.clientX;
-                startY = e.clientY;
-            }
+            if (e.isPrimary || headers.size === 0) { startX = e.clientX; startY = e.clientY; }
         });
+        // --- Dynamic Breakout Logic ---
+        function resizeMap() {
+            const articleContent = root.closest('.article-content') || root.parentElement;
 
-        root.addEventListener('click', e => {
-            // Prevent default browser click behavior that might interfere
-            e.preventDefault();
+            if (articleContent) {
+                const parentRect = articleContent.getBoundingClientRect();
+                const windowWidth = window.innerWidth;
 
-            const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-            if (dist > 10) return; // Was a drag
+                // Target Width: 
+                // Unconstrained by 'main', we want a nice wide map on desktop.
+                // Cap at 1280px or window width - 32px (margins).
+                const targetWidth = Math.min(windowWidth - 32, 1280);
 
-            // Fix: Use elementFromPoint because setPointerCapture might retarget the event to #root
-            // even if the user clicked on a path.
-            const target = document.elementFromPoint(e.clientX, e.clientY);
+                // Only activate breakout if the parent is narrower than our target
+                // (i.e. we are on desktop with a constrained text column)
+                if (parentRect.width < targetWidth) {
+                    // Calculate the position to center the map in the viewport
+                    const targetLeft = (windowWidth - targetWidth) / 2;
 
-            // Ensure we actually found something (could be null if outside window, unlikely here)
-            if (!target) return;
+                    // Calculate the necessary margin-left relative to the parent's current position
+                    const offsetLeft = targetLeft - parentRect.left;
 
-            const t = target.closest('.visited-path');
-            if (t && t.dataset.link) {
-                window.location.href = t.dataset.link;
+                    root.style.width = `${targetWidth}px`;
+                    root.style.marginLeft = `${offsetLeft}px`;
+                } else {
+                    // Mobile / Full width parent -> Reset
+                    root.style.width = '100%';
+                    root.style.marginLeft = '0';
+                }
             }
-        });
+        }
+
+        window.addEventListener('resize', resizeMap);
+        // Run once on init and after a slight delay for layout stability
+        resizeMap();
+        setTimeout(resizeMap, 300);
+        setTimeout(resizeMap, 1000); // Extra safety for late layout shifts
 
     })();
 </script>
