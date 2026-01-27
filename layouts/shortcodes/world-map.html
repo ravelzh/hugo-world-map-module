@@ -25,9 +25,12 @@
     .wm-wrapper {
         position: relative;
         aspect-ratio: 2000 / 857;
-        width: 100%;
+        /* Break out of max-w-prose container - fill parent section width */
+        width: calc(100vw - 4rem);
+        max-width: 1024px;
         height: auto;
-        margin: 0 auto;
+        margin-left: 50%;
+        transform: translateX(-50%);
         background: #f0f9ff;
         overflow: hidden;
         border: 1px solid #ccc;
@@ -482,24 +485,10 @@
             window.addEventListener('resize', resizeMap);
         }
 
-        // --- Dynamic Breakout Logic ---
+        // --- Resize Handler ---
         function resizeMap() {
-            const articleContent = root.closest('.article-content') || root.parentElement;
-            if (!articleContent) return;
-
-            const parentRect = articleContent.getBoundingClientRect();
-            const windowWidth = window.innerWidth;
-            const targetWidth = Math.min(windowWidth - 32, 1280);
-
-            if (parentRect.width < targetWidth) {
-                const targetLeft = (windowWidth - targetWidth) / 2;
-                const offsetLeft = targetLeft - parentRect.left;
-                root.style.width = targetWidth + 'px';
-                root.style.marginLeft = offsetLeft + 'px';
-            } else {
-                root.style.width = '100%';
-                root.style.marginLeft = '0';
-            }
+            // CSS handles width/centering via calc(100vw - 4rem) and transform
+            // No inline styles needed
         }
 
         // --- Intersection Observer for Lazy Loading ---

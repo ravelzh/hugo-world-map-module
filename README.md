@@ -8,6 +8,7 @@ Interactive SVG world map for Hugo. Highlights visited countries based on taxono
 
 - 🚀 Lazy loading & 60fps performance
 - 📱 Pinch-to-zoom & pan on mobile
+- ↔️ Full-width responsive layout
 - 🔗 Auto-links taxonomy terms to countries
 - 🎨 Sharp SVG at any zoom level
 - 🔒 Self-hosted, no tracking
