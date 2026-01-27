@@ -6,11 +6,12 @@ Map Preview: [go-offroad.ch](https://go-offroad.ch)
 
 ## 🌟 Features
 
-* **🚀 High Performance:** Uses `requestAnimationFrame` and optimized CSS transforms for buttery smooth 60fps rendering.
-* **📱 Mobile Optimized:** Native-like **Pinch-to-Zoom** and **Pan** support for touch devices.
+* **🚀 High Performance:** Uses `requestAnimationFrame`, lazy loading via Intersection Observer, and optimized CSS transforms for 60fps rendering.
+* **📱 Mobile Optimized:** Native-like **Pinch-to-Zoom** and **Pan** with smart scroll passthrough.
 * **🔗 Content Integrated:** Automatically links taxonomy terms (Destinations) to map countries.
-* **🎨 Simple & Clean:** Vector-based (SVG) rendering that looks sharp at any zoom level.
-* **🔒 Privacy:** Self-hosted SVG, no external tracking or API calls (Google Maps etc.).
+* **🎨 Sharp & Clean:** Vector-based (SVG) rendering that stays crisp at any zoom level.
+* **🔒 Privacy:** Self-hosted SVG, no external tracking or API calls.
+* **⚡ Lazy Loading:** Map initializes only when scrolled into viewport.
 
 ## Demo
 A live demo is available at [go-offroad.ch/map](https://go-offroad.ch/map).

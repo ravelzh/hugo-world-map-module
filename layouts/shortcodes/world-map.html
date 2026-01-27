@@ -114,7 +114,10 @@
         display: block;
         transform-origin: 0 0;
         shape-rendering: geometricPrecision;
-        /* Performance: GPU acceleration hint */
+    }
+
+    /* GPU acceleration only during active interaction to prevent blur */
+    .wm-interacting svg {
         will-change: transform;
     }
 
@@ -352,8 +355,29 @@
         }
 
         // --- Event Handlers ---
+        let interactionTimeout = null;
+
+        function startInteraction() {
+            if (interactionTimeout) {
+                clearTimeout(interactionTimeout);
+                interactionTimeout = null;
+            }
+            viewport.classList.add('wm-interacting');
+        }
+
+        function endInteraction() {
+            // Debounce: wait 150ms after last interaction before removing class
+            // This allows smooth continuous zooming while preventing blur
+            if (interactionTimeout) clearTimeout(interactionTimeout);
+            interactionTimeout = setTimeout(() => {
+                viewport.classList.remove('wm-interacting');
+                interactionTimeout = null;
+            }, 150);
+        }
+
         function onPointerDown(e) {
             if (e.button !== 0 && e.pointerType === 'mouse') return;
+            startInteraction();
             root.setPointerCapture(e.pointerId);
             pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
             state.isDragging = true;
@@ -418,6 +442,7 @@
             const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
             if (pointers.size === 0) {
                 state.isDragging = false;
+                endInteraction();
                 if (dist < 10) {
                     const target = document.elementFromPoint(e.clientX, e.clientY);
                     const t = target ? target.closest('.wm-visited') : null;
@@ -438,8 +463,10 @@
 
         function onWheel(e) {
             e.preventDefault();
+            startInteraction();
             const rect = root.getBoundingClientRect();
             zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
+            endInteraction();
         }
 
         function setupEventListeners() {
