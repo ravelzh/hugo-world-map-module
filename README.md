@@ -62,6 +62,10 @@ See [USAGE.md](USAGE.md) for:
 - i18n translations
 - CSS customization
 
+## Credits
+
+SVG world map from [SimpleMaps](https://simplemaps.com/resources/svg-world) (free for commercial and personal use).
+
 ## License
 
 Apache License 2.0 - [LICENSE](LICENSE)
