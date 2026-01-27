@@ -1,3 +1,3 @@
-module github.com/ravel/hugo-world-map-module
+module github.com/ravelzh/hugo-world-map-module
 
 go 1.20
