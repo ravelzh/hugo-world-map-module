@@ -22,7 +22,7 @@
 {{ end }}
 
 <style>
-    .travel-map-wrapper {
+    .wm-wrapper {
         position: relative;
         /* Enforce strict aspect ratio (2000:857) for fluid scaling */
         aspect-ratio: 2000 / 857;
@@ -41,8 +41,8 @@
         border-radius: 8px;
     }
 
-    /* Transparent Buttons (Glassmorphism) - Kept as requested */
-    .map-btn {
+    /* Transparent Buttons (Glassmorphism) */
+    .wm-btn {
         width: 36px;
         height: 36px;
         background: rgba(255, 255, 255, 0.6);
@@ -61,27 +61,27 @@
         transition: background 0.2s;
     }
 
-    .map-btn:hover {
+    .wm-btn:hover {
         background: rgba(255, 255, 255, 0.9);
     }
 
-    .map-btn:active {
+    .wm-btn:active {
         background: #e2e8f0;
     }
 
     /* Layout Elements */
-    #map-viewport {
+    .wm-viewport {
         width: 100%;
         height: 100%;
         cursor: grab;
         transform-style: preserve-3d;
     }
 
-    #map-viewport:active {
+    .wm-viewport:active {
         cursor: grabbing;
     }
 
-    #map-viewport svg {
+    .wm-viewport svg {
         width: 100% !important;
         height: 100% !important;
         display: block;
@@ -89,7 +89,7 @@
         shape-rendering: geometricPrecision;
     }
 
-    path {
+    .wm-wrapper path {
         fill: #cbd5e1;
         stroke: white;
         stroke-width: 0.5px;
@@ -97,17 +97,17 @@
         transition: fill 0.2s ease;
     }
 
-    .visited-path {
+    .wm-visited {
         cursor: pointer;
         opacity: 1 !important;
     }
 
-    .visited-path:hover {
+    .wm-visited:hover {
         filter: brightness(0.85);
         stroke: #333;
     }
 
-    #tt {
+    .wm-tooltip {
         position: absolute;
         top: 0;
         left: 0;
@@ -127,11 +127,11 @@
         transform: translate(10px, 10px);
     }
 
-    #tt.show {
+    .wm-tooltip.wm-show {
         opacity: 1;
     }
 
-    .map-controls {
+    .wm-controls {
         position: absolute;
         bottom: 16px;
         right: 16px;
@@ -142,13 +142,12 @@
     }
 </style>
 
-<div class="travel-map-wrapper" id="root" data-visited-label="{{ i18n " world_map_visited" | default (i18n "visited" |
-    default "(Visited)" ) }}">
-    <div id="d-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
-    <div id="d-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
-    <div id="d-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
+<div class="wm-wrapper" id="wm-root" data-visited-label="{{ i18n "world_map_visited" | default (i18n "visited" | default "(Visited)") }}">
+    <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
+    <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
+    <div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
 
-    <div id="map-viewport">
+    <div class="wm-viewport" id="wm-viewport">
         {{ $svg := resources.Get "images/world.svg" }}
         {{ if $svg }}
         {{ $svg.Content | safeHTML }}
@@ -157,11 +156,11 @@
         {{ end }}
     </div>
 
-    <div id="tt"></div>
+    <div class="wm-tooltip" id="wm-tooltip"></div>
 
-    <div class="map-controls">
-        <button class="map-btn" id="btn-zoom-in" aria-label="Zoom In">+</button>
-        <button class="map-btn" id="btn-zoom-out" aria-label="Zoom Out">-</button>
+    <div class="wm-controls">
+        <button class="wm-btn" id="wm-btn-zoom-in" aria-label="Zoom In">+</button>
+        <button class="wm-btn" id="wm-btn-zoom-out" aria-label="Zoom Out">-</button>
     </div>
 </div>
 
@@ -171,10 +170,10 @@
         const MIN_SCALE = 1, MAX_SCALE = 20;
         const COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
 
-        const root = document.getElementById('root');
-        const viewport = document.getElementById('map-viewport');
+        const root = document.getElementById('wm-root');
+        const viewport = document.getElementById('wm-viewport');
         const svgLayer = viewport.querySelector('svg');
-        const tt = document.getElementById('tt');
+        const tt = document.getElementById('wm-tooltip');
 
         if (!svgLayer) return;
 
@@ -184,10 +183,13 @@
 
         let visited = {}, names = {}, isos = {};
         try {
-            visited = JSON.parse(document.getElementById('d-visit').dataset.json);
-            names = JSON.parse(document.getElementById('d-map').dataset.json);
-            isos = JSON.parse(document.getElementById('d-iso').dataset.json);
+            visited = JSON.parse(document.getElementById('wm-data-visit').dataset.json);
+            names = JSON.parse(document.getElementById('wm-data-map').dataset.json);
+            isos = JSON.parse(document.getElementById('wm-data-iso').dataset.json);
         } catch (e) { console.error("Map Data Error:", e); }
+
+        // Click tracking for distinguishing drag from click
+        let startX = 0, startY = 0;
 
         viewport.querySelectorAll('path').forEach(p => {
             let iso = p.id?.length === 2 ? p.id.toUpperCase() : null;
@@ -204,7 +206,7 @@
             p.dataset.disp = disp || "";
 
             if (iso && visited[iso]) {
-                p.classList.add('visited-path');
+                p.classList.add('wm-visited');
                 const hash = (iso || "x").split("").reduce((a, b) => a + b.charCodeAt(0), 0);
                 p.style.fill = COLORS[hash % COLORS.length];
                 p.dataset.link = visited[iso].link;
@@ -264,15 +266,15 @@
                 const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('path');
                 if (t && (t.dataset.visitedName || t.dataset.disp)) {
                     tt.textContent = t.dataset.visitedName || t.dataset.disp;
-                    if (t.classList.contains('visited-path')) {
+                    if (t.classList.contains('wm-visited')) {
                         const label = root.dataset.visitedLabel || "(Visited)";
                         tt.textContent += " " + label;
                     }
-                    tt.classList.add('show');
+                    tt.classList.add('wm-show');
                     const rect = root.getBoundingClientRect();
                     tt.style.transform = `translate(${e.clientX - rect.left + 15}px, ${e.clientY - rect.top + 15}px)`;
                 } else {
-                    tt.classList.remove('show');
+                    tt.classList.remove('wm-show');
                 }
             }
             if (!headers.has(e.pointerId)) return;
@@ -305,7 +307,7 @@
                 state.isDragging = false;
                 if (dist < 10) {
                     const target = document.elementFromPoint(e.clientX, e.clientY);
-                    const t = target?.closest('.visited-path');
+                    const t = target?.closest('.wm-visited');
                     if (t && t.dataset.link) window.location.href = t.dataset.link;
                 }
             } else {
@@ -321,10 +323,9 @@
             zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
         }, { passive: false });
 
-        document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.3));
-        document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.7));
+        document.getElementById('wm-btn-zoom-in').addEventListener('click', () => zoom(1.3));
+        document.getElementById('wm-btn-zoom-out').addEventListener('click', () => zoom(0.7));
 
-        let startX = 0, startY = 0;
         root.addEventListener('pointerdown', e => {
             if (e.isPrimary || headers.size === 0) { startX = e.clientX; startY = e.clientY; }
         });
