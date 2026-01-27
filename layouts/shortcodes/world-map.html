@@ -21,50 +21,19 @@
 {{ end }}
 {{ end }}
 
+{{- /* Config: Site params + Shortcode overrides */ -}}
+{{- $P := $site.Params.worldMap | default dict -}}
+{{- $bgL := .Get "backgroundLight" | default ($P.backgroundLight | default "#f0f9ff") -}}
+{{- $bgD := .Get "backgroundDark" | default ($P.backgroundDark | default "#1f2937") -}}
+{{- $fL := .Get "mapFillLight" | default ($P.mapFillLight | default "#cbd5e1") -}}
+{{- $fD := .Get "mapFillDark" | default ($P.mapFillDark | default "#374151") -}}
+{{- $str := .Get "mapStroke" | default ($P.mapStroke | default "white") -}}
+{{- $tr := .Get "transparent" | default ($P.transparent | default false) -}}
+{{- $width := .Get "width" | default ($P.width | default "calc(100vw - 4rem)") -}}
+{{- $maxWidth := .Get "maxWidth" | default ($P.maxWidth | default "1024px") -}}
+{{- $borderRadius := .Get "borderRadius" | default ($P.borderRadius | default "8px") -}}
+
 <style>
-    /* Config */
-        {
-            {
-            - $P: =$site.Params.worldMap|default dict
-        }
-    }
-
-        {
-            {
-            $bgL: =$P.backgroundLight|default "#f0f9ff"
-        }
-    }
-
-        {
-            {
-            $bgD: =$P.backgroundDark|default "#1f2937"
-        }
-    }
-
-        {
-            {
-            - $fL: =$P.mapFillLight|default "#cbd5e1"
-        }
-    }
-
-        {
-            {
-            $fD: =$P.mapFillDark|default "#374151"
-        }
-    }
-
-        {
-            {
-            $str: =$P.mapStroke|default "white"
-        }
-    }
-
-        {
-            {
-            $tr: =$P.transparent|default false
-        }
-    }
-
     /* Light mode (default) */
     .wm-wrapper {
         --wm-bg: {
@@ -155,7 +124,7 @@
         }
     }
 
-    /* Dark mode: Class-based toggle (Blowfish, etc.) */
+    /* Dark mode: Class-based toggle */
     html.dark .wm-wrapper,
     .dark .wm-wrapper {
         --wm-bg: {
@@ -199,30 +168,49 @@
     .wm-wrapper {
         position: relative;
         aspect-ratio: 2000 / 857;
-        /* Break out of max-w-prose container - fill parent section width */
-        width: calc(100vw - 4rem);
-        max-width: 1024px;
+
+        width: {
+                {
+                $width
+            }
+        }
+
+        ;
+
+        max-width: {
+                {
+                $maxWidth
+            }
+        }
+
+        ;
         height: auto;
         margin-left: 50%;
         transform: translateX(-50%);
         background: var(--wm-bg);
         overflow: hidden;
         border: 1px solid var(--wm-map-fill);
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family: system-ui,
+        -apple-system,
+        sans-serif;
         touch-action: pan-y pinch-zoom;
         user-select: none;
         -webkit-user-select: none;
-        border-radius: 8px;
-        /* Performance: layout containment */
+
+        border-radius: {
+                {
+                $borderRadius
+            }
+        }
+
+        ;
         contain: layout style;
     }
 
-    /* When map is zoomed, disable scroll passthrough */
     .wm-wrapper.wm-zoomed {
         touch-action: none;
     }
 
-    /* Loading placeholder */
     .wm-wrapper.wm-loading {
         display: flex;
         align-items: center;
@@ -245,7 +233,6 @@
         }
     }
 
-    /* Transparent Buttons (Glassmorphism) */
     .wm-btn {
         width: 36px;
         height: 36px;
@@ -273,7 +260,6 @@
         background: #e2e8f0;
     }
 
-    /* Layout Elements */
     .wm-viewport {
         width: 100%;
         height: 100%;
@@ -293,7 +279,6 @@
         shape-rendering: geometricPrecision;
     }
 
-    /* GPU acceleration only during active interaction to prevent blur */
     .wm-interacting svg {
         will-change: transform;
     }
@@ -350,7 +335,6 @@
         z-index: 10;
     }
 
-    /* Hide controls until initialized */
     .wm-loading .wm-controls,
     .wm-loading .wm-viewport,
     .wm-loading .wm-tooltip {
@@ -363,21 +347,13 @@
     <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
     <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
     <div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
-
-    <!-- Loading spinner (shown until lazy init) -->
     <div class="wm-loader" id="wm-loader"></div>
-
     <div class="wm-viewport" id="wm-viewport">
         {{ $svg := resources.Get "images/world.svg" }}
-        {{ if $svg }}
-        {{ $svg.Content | safeHTML }}
-        {{ else }}
-        <p style="color:red">World Map SVG not found in assets/images/world.svg</p>
-        {{ end }}
+        {{ if $svg }}{{ $svg.Content | safeHTML }}{{ else }}<p style="color:red">World Map SVG not found in
+            assets/images/world.svg</p>{{ end }}
     </div>
-
     <div class="wm-tooltip" id="wm-tooltip"></div>
-
     <div class="wm-controls">
         <button class="wm-btn" id="wm-btn-zoom-in" aria-label="Zoom In">+</button>
         <button class="wm-btn" id="wm-btn-zoom-out" aria-label="Zoom Out">-</button>
@@ -387,52 +363,33 @@
 <script>
     (function () {
         'use strict';
-
-        // Cache all DOM elements once
         const root = document.getElementById('wm-root');
         if (!root) return;
-
         const viewport = document.getElementById('wm-viewport');
         const svgLayer = viewport ? viewport.querySelector('svg') : null;
         const tt = document.getElementById('wm-tooltip');
         const loader = document.getElementById('wm-loader');
         const btnZoomIn = document.getElementById('wm-btn-zoom-in');
         const btnZoomOut = document.getElementById('wm-btn-zoom-out');
-
         if (!svgLayer) return;
 
-        // State
         const state = { scale: 1, x: 0, y: 0, isDragging: false, initialized: false };
         const MIN_SCALE = 1, MAX_SCALE = 20;
         const COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
-
-        // Click tracking
         let startX = 0, startY = 0;
-
-        // Pointer tracking
         const pointers = new Map();
         let lastDist = 0, lastCenter = { x: 0, y: 0 };
-
-        // RAF optimization
         let rafId = null;
 
-        // --- Lazy initialization with Intersection Observer ---
         function initMap() {
             if (state.initialized) return;
             state.initialized = true;
-
-            // Remove loading state
             root.classList.remove('wm-loading');
             if (loader) loader.style.display = 'none';
-
-            // Setup SVG
-            if (!svgLayer.hasAttribute('viewBox')) {
-                svgLayer.setAttribute('viewBox', '0 0 2000 857');
-            }
+            if (!svgLayer.hasAttribute('viewBox')) svgLayer.setAttribute('viewBox', '0 0 2000 857');
             svgLayer.removeAttribute('width');
             svgLayer.removeAttribute('height');
 
-            // Parse data once
             let visited = {}, names = {}, isos = {};
             try {
                 const visitEl = document.getElementById('wm-data-visit');
@@ -441,27 +398,17 @@
                 if (visitEl) visited = JSON.parse(visitEl.dataset.json);
                 if (mapEl) names = JSON.parse(mapEl.dataset.json);
                 if (isoEl) isos = JSON.parse(isoEl.dataset.json);
-            } catch (e) {
-                console.error("World Map: Data parse error", e);
-            }
+            } catch (e) { console.error("World Map: Data parse error", e); }
 
-            // Process paths once
-            const paths = viewport.querySelectorAll('path');
-            paths.forEach(p => {
+            viewport.querySelectorAll('path').forEach(p => {
                 let iso = p.id && p.id.length === 2 ? p.id.toUpperCase() : null;
                 let n = p.getAttribute('name');
-
-                if (!n && !iso) {
-                    const cls = p.getAttribute('class') || "";
-                    if (cls.length > 2) n = cls.replace("land", "").trim();
-                }
+                if (!n && !iso) { const cls = p.getAttribute('class') || ""; if (cls.length > 2) n = cls.replace("land", "").trim(); }
                 if (n) n = n.replace(/_/g, " ").trim();
                 if (n && !iso) iso = names[n];
-
                 let disp = n || iso;
                 if (iso && isos[iso]) disp = isos[iso];
                 p.dataset.disp = disp || "";
-
                 if (iso && visited[iso]) {
                     p.classList.add('wm-visited');
                     const hash = (iso || "x").split("").reduce((a, b) => a + b.charCodeAt(0), 0);
@@ -470,87 +417,33 @@
                     p.dataset.visitedName = visited[iso].name;
                 }
             });
-
-            // Setup event listeners
             setupEventListeners();
-
-            // Initial resize
-            resizeMap();
-            setTimeout(resizeMap, 300);
         }
 
-        // --- Render ---
-        function requestUpdate() {
-            if (!rafId) rafId = requestAnimationFrame(render);
-        }
-
-        function render() {
-            svgLayer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
-            rafId = null;
-        }
-
-        // --- Zoom ---
-        function clamp(val, min, max) {
-            return Math.min(Math.max(val, min), max);
-        }
+        function requestUpdate() { if (!rafId) rafId = requestAnimationFrame(render); }
+        function render() { svgLayer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`; rafId = null; }
+        function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
 
         function zoom(factor, cx, cy) {
-            if (cx === undefined) {
-                const rect = root.getBoundingClientRect();
-                cx = rect.width / 2;
-                cy = rect.height / 2;
-            }
+            if (cx === undefined) { const rect = root.getBoundingClientRect(); cx = rect.width / 2; cy = rect.height / 2; }
             const oldScale = state.scale;
             const newScale = clamp(oldScale * factor, MIN_SCALE, MAX_SCALE);
             if (newScale === oldScale) return;
-
             const wx = (cx - state.x) / oldScale;
             const wy = (cy - state.y) / oldScale;
             state.x = cx - (wx * newScale);
             state.y = cy - (wy * newScale);
             state.scale = newScale;
-
-            // Update touch-action based on zoom level
-            if (newScale > 1) {
-                root.classList.add('wm-zoomed');
-            } else {
-                root.classList.remove('wm-zoomed');
-            }
-
+            if (newScale > 1) root.classList.add('wm-zoomed'); else root.classList.remove('wm-zoomed');
             requestUpdate();
         }
 
-        // --- Pointer helpers ---
-        function getCenter(ptrs) {
-            let x = 0, y = 0, count = 0;
-            for (const p of ptrs.values()) { x += p.x; y += p.y; count++; }
-            return { x: x / count, y: y / count };
-        }
+        function getCenter(ptrs) { let x = 0, y = 0, count = 0; for (const p of ptrs.values()) { x += p.x; y += p.y; count++; } return { x: x / count, y: y / count }; }
+        function getDist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
 
-        function getDist(p1, p2) {
-            return Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        }
-
-        // --- Event Handlers ---
         let interactionTimeout = null;
-
-        function startInteraction() {
-            if (interactionTimeout) {
-                clearTimeout(interactionTimeout);
-                interactionTimeout = null;
-            }
-            viewport.classList.add('wm-interacting');
-        }
-
-        function endInteraction() {
-            // Debounce: wait 150ms after last interaction before removing class
-            // This allows smooth continuous zooming while preventing blur
-            if (interactionTimeout) clearTimeout(interactionTimeout);
-            interactionTimeout = setTimeout(() => {
-                viewport.classList.remove('wm-interacting');
-                interactionTimeout = null;
-            }, 150);
-        }
+        function startInteraction() { if (interactionTimeout) { clearTimeout(interactionTimeout); interactionTimeout = null; } viewport.classList.add('wm-interacting'); }
+        function endInteraction() { if (interactionTimeout) clearTimeout(interactionTimeout); interactionTimeout = setTimeout(() => { viewport.classList.remove('wm-interacting'); interactionTimeout = null; }, 150); }
 
         function onPointerDown(e) {
             if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -558,93 +451,50 @@
             root.setPointerCapture(e.pointerId);
             pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
             state.isDragging = true;
-
-            if (pointers.size === 2) {
-                const pts = Array.from(pointers.values());
-                lastDist = getDist(pts[0], pts[1]);
-            }
+            if (pointers.size === 2) { const pts = Array.from(pointers.values()); lastDist = getDist(pts[0], pts[1]); }
             lastCenter = getCenter(pointers);
-
-            if (e.isPrimary || pointers.size === 1) {
-                startX = e.clientX;
-                startY = e.clientY;
-            }
+            if (e.isPrimary || pointers.size === 1) { startX = e.clientX; startY = e.clientY; }
         }
 
         function onPointerMove(e) {
-            // Tooltip for mouse
             if (e.pointerType === 'mouse' && tt) {
                 const t = document.elementFromPoint(e.clientX, e.clientY);
                 const path = t ? t.closest('path') : null;
                 if (path && (path.dataset.visitedName || path.dataset.disp)) {
                     tt.textContent = path.dataset.visitedName || path.dataset.disp;
-                    if (path.classList.contains('wm-visited')) {
-                        tt.textContent += " " + (root.dataset.visitedLabel || "(Visited)");
-                    }
+                    if (path.classList.contains('wm-visited')) tt.textContent += " " + (root.dataset.visitedLabel || "(Visited)");
                     tt.classList.add('wm-show');
                     const rect = root.getBoundingClientRect();
                     tt.style.transform = `translate(${e.clientX - rect.left + 15}px, ${e.clientY - rect.top + 15}px)`;
-                } else {
-                    tt.classList.remove('wm-show');
-                }
+                } else { tt.classList.remove('wm-show'); }
             }
-
             if (!pointers.has(e.pointerId)) return;
             pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
             const currentCenter = getCenter(pointers);
-            const dx = currentCenter.x - lastCenter.x;
-            const dy = currentCenter.y - lastCenter.y;
-            state.x += dx;
-            state.y += dy;
-
+            state.x += currentCenter.x - lastCenter.x;
+            state.y += currentCenter.y - lastCenter.y;
             if (pointers.size === 2) {
                 const pts = Array.from(pointers.values());
                 const currentDist = getDist(pts[0], pts[1]);
-                if (lastDist > 0) {
-                    const rect = root.getBoundingClientRect();
-                    zoom(currentDist / lastDist, currentCenter.x - rect.left, currentCenter.y - rect.top);
-                }
+                if (lastDist > 0) { const rect = root.getBoundingClientRect(); zoom(currentDist / lastDist, currentCenter.x - rect.left, currentCenter.y - rect.top); }
                 lastDist = currentDist;
-            } else {
-                requestUpdate();
-            }
+            } else { requestUpdate(); }
             lastCenter = currentCenter;
         }
 
         function onPointerUp(e) {
             pointers.delete(e.pointerId);
             try { root.releasePointerCapture(e.pointerId); } catch (err) { }
-
             const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
             if (pointers.size === 0) {
                 state.isDragging = false;
                 endInteraction();
-                if (dist < 10) {
-                    const target = document.elementFromPoint(e.clientX, e.clientY);
-                    const t = target ? target.closest('.wm-visited') : null;
-                    if (t && t.dataset.link) {
-                        window.location.href = t.dataset.link;
-                    }
-                }
-            } else {
-                lastCenter = getCenter(pointers);
-                lastDist = 0;
-            }
+                if (dist < 10) { const target = document.elementFromPoint(e.clientX, e.clientY); const t = target ? target.closest('.wm-visited') : null; if (t && t.dataset.link) window.location.href = t.dataset.link; }
+            } else { lastCenter = getCenter(pointers); lastDist = 0; }
         }
 
-        function onPointerCancel(e) {
-            pointers.delete(e.pointerId);
-            state.isDragging = false;
-        }
-
-        function onWheel(e) {
-            e.preventDefault();
-            startInteraction();
-            const rect = root.getBoundingClientRect();
-            zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
-            endInteraction();
-        }
+        function onPointerCancel(e) { pointers.delete(e.pointerId); state.isDragging = false; }
+        function onWheel(e) { e.preventDefault(); startInteraction(); const rect = root.getBoundingClientRect(); zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top); endInteraction(); }
 
         function setupEventListeners() {
             root.addEventListener('pointerdown', onPointerDown);
@@ -652,37 +502,13 @@
             root.addEventListener('pointerup', onPointerUp);
             root.addEventListener('pointercancel', onPointerCancel);
             root.addEventListener('wheel', onWheel, { passive: false });
-
             if (btnZoomIn) btnZoomIn.addEventListener('click', () => zoom(1.3));
             if (btnZoomOut) btnZoomOut.addEventListener('click', () => zoom(0.7));
-
-            window.addEventListener('resize', resizeMap);
         }
 
-        // --- Resize Handler ---
-        function resizeMap() {
-            // CSS handles width/centering via calc(100vw - 4rem) and transform
-            // No inline styles needed
-        }
-
-        // --- Intersection Observer for Lazy Loading ---
         if ('IntersectionObserver' in window) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        initMap();
-                        observer.disconnect();
-                    }
-                });
-            }, {
-                rootMargin: '100px',
-                threshold: 0.01
-            });
+            const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { initMap(); observer.disconnect(); } }); }, { rootMargin: '100px', threshold: 0.01 });
             observer.observe(root);
-        } else {
-            // Fallback for older browsers
-            initMap();
-        }
-
+        } else { initMap(); }
     })();
 </script>

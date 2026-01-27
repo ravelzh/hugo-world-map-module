@@ -8,7 +8,29 @@
 
 The map reads taxonomy terms from `destinationen` or `destinations` and highlights the matching countries.
 
+## Shortcode Parameters
+
+You can override settings directly in the shortcode:
+
+```go
+{{< world-map width="100%" maxWidth="800px" borderRadius="0" transparent="true" >}}
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `width` | CSS width | `calc(100vw - 4rem)` |
+| `maxWidth` | Maximum width | `1024px` |
+| `borderRadius` | Corner radius | `8px` |
+| `transparent` | Transparent background | `false` |
+| `backgroundLight` | Light mode background | `#f0f9ff` |
+| `backgroundDark` | Dark mode background | `#1f2937` |
+| `mapFillLight` | Light mode country color | `#cbd5e1` |
+| `mapFillDark` | Dark mode country color | `#374151` |
+| `mapStroke` | Country border color | `white` |
+
 ## Hugo Configuration
+
+All shortcode parameters can also be set globally:
 
 ```toml
 # hugo.toml
@@ -19,14 +41,19 @@ The map reads taxonomy terms from `destinationen` or `destinations` and highligh
   [[module.imports]]
     path = "github.com/ravelzh/hugo-world-map-module"
 
-# Optional: Map Styling and Theming
 [params.worldMap]
-  backgroundLight = "#f0f9ff"  # Soft blue
-  backgroundDark  = "#1f2937"  # Dark gray
-  mapFillLight    = "#cbd5e1"  # Light gray
-  mapFillDark     = "#374151"  # Darker gray
-  mapStroke       = "white"    # Country borders
-  transparent     = false      # Set to true to make background transparent
+  # Size & Layout
+  width = "100%"
+  maxWidth = "1024px"
+  borderRadius = "8px"
+  
+  # Colors
+  backgroundLight = "#f0f9ff"
+  backgroundDark  = "#1f2937"
+  mapFillLight    = "#cbd5e1"
+  mapFillDark     = "#374151"
+  mapStroke       = "white"
+  transparent     = false
 ```
 
 ## Country Mapping
@@ -37,7 +64,6 @@ The module maps your taxonomy terms to ISO country codes.
 - "Albanien" → AL
 - "Deutschland" → DE
 - "Schweiz" → CH
-- etc.
 
 ### Custom mappings
 
@@ -57,12 +83,6 @@ Customize the "Visited" tooltip label:
 other = "BEREIST"
 ```
 
-`i18n/en.toml`:
-```toml
-[world_map_visited]
-other = "Visited"
-```
-
 ## CSS Classes
 
 | Class | Description |
@@ -70,7 +90,7 @@ other = "Visited"
 | `.wm-wrapper` | Main container |
 | `.wm-visited` | Visited country path |
 | `.wm-tooltip` | Tooltip element |
-| `.wm-btn-zoom-in/out` | Zoom buttons |
+| `.wm-btn` | Zoom buttons |
 
 ## Performance
 
