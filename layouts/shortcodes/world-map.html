@@ -181,7 +181,7 @@
     }
 </style>
 
-<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n " world_map_visited" | default
+<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n "world_map_visited" | default
     (i18n "visited" | default "(Visited)" ) }}">
     <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
     <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
