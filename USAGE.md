@@ -18,6 +18,15 @@ The map reads taxonomy terms from `destinationen` or `destinations` and highligh
 [module]
   [[module.imports]]
     path = "github.com/ravelzh/hugo-world-map-module"
+
+# Optional: Map Styling and Theming
+[params.worldMap]
+  backgroundLight = "#f0f9ff"  # Soft blue
+  backgroundDark  = "#1f2937"  # Dark gray
+  mapFillLight    = "#cbd5e1"  # Light gray
+  mapFillDark     = "#374151"  # Darker gray
+  mapStroke       = "white"    # Country borders
+  transparent     = false      # Set to true to make background transparent
 ```
 
 ## Country Mapping

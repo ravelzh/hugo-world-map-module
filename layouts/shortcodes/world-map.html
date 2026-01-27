@@ -22,6 +22,12 @@
 {{ end }}
 
 <style>
+    /* Config */
+    {{- $P:=$site.Params.worldMap|default dict }}{{ $bgL:=$P.backgroundLight|default "#f0f9ff" }}{{ $bgD:=$P.backgroundDark|default "#1f2937" }}
+    {{- $fL:=$P.mapFillLight|default "#cbd5e1" }}{{ $fD:=$P.mapFillDark|default "#374151" }}{{ $str:=$P.mapStroke|default "white" }}{{ $tr:=$P.transparent|default false }}
+    :root{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgL }}{{ end }};--wm-map-fill:{{ $fL }};--wm-map-stroke:{{ $str }};--wm-btn-bg:rgba(255,255,255,0.6);--wm-btn-border:rgba(203,213,225,0.6);--wm-btn-text:#333;}
+    @media(prefers-color-scheme:dark){:root{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgD }}{{ end }};--wm-map-fill:{{ $fD }};--wm-btn-bg:rgba(31,41,55,0.6);--wm-btn-border:rgba(75,85,99,0.6);--wm-btn-text:#e5e7eb;}}
+    html.dark .wm-wrapper,.dark .wm-wrapper{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgD }}{{ end }};--wm-map-fill:{{ $fD }};--wm-btn-bg:rgba(31,41,55,0.6);--wm-btn-border:rgba(75,85,99,0.6);--wm-btn-text:#e5e7eb;}
     .wm-wrapper {
         position: relative;
         aspect-ratio: 2000 / 857;
@@ -31,9 +37,9 @@
         height: auto;
         margin-left: 50%;
         transform: translateX(-50%);
-        background: #f0f9ff;
+        background: var(--wm-bg);
         overflow: hidden;
-        border: 1px solid #ccc;
+        border: 1px solid var(--wm-map-fill);
         font-family: system-ui, -apple-system, sans-serif;
         touch-action: pan-y pinch-zoom;
         user-select: none;
@@ -59,7 +65,7 @@
     .wm-loader {
         width: 40px;
         height: 40px;
-        border: 3px solid #cbd5e1;
+        border: 3px solid var(--wm-map-fill);
         border-top-color: #3b82f6;
         border-radius: 50%;
         animation: wm-spin 1s linear infinite;
@@ -75,14 +81,14 @@
     .wm-btn {
         width: 36px;
         height: 36px;
-        background: rgba(255, 255, 255, 0.6);
+        background: var(--wm-btn-bg);
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
-        border: 1px solid rgba(203, 213, 225, 0.6);
+        border: 1px solid var(--wm-btn-border);
         border-radius: 6px;
         font-weight: bold;
         font-size: 18px;
-        color: #333;
+        color: var(--wm-btn-text);
         cursor: pointer;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         display: flex;
@@ -125,8 +131,8 @@
     }
 
     .wm-wrapper path {
-        fill: #cbd5e1;
-        stroke: white;
+        fill: var(--wm-map-fill);
+        stroke: var(--wm-map-stroke);
         stroke-width: 0.5px;
         vector-effect: non-scaling-stroke;
         transition: fill 0.2s ease;
@@ -184,7 +190,7 @@
     }
 </style>
 
-<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n "world_map_visited" | default
+<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n " world_map_visited" | default
     (i18n "visited" | default "(Visited)" ) }}">
     <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
     <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
