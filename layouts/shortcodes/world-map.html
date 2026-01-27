@@ -24,21 +24,48 @@
 <style>
     .wm-wrapper {
         position: relative;
-        /* Enforce strict aspect ratio (2000:857) for fluid scaling */
         aspect-ratio: 2000 / 857;
-        /* Fill the available content width completely */
         width: 100%;
         height: auto;
         margin: 0 auto;
-
         background: #f0f9ff;
         overflow: hidden;
         border: 1px solid #ccc;
         font-family: system-ui, -apple-system, sans-serif;
-        touch-action: none;
+        touch-action: pan-y pinch-zoom;
         user-select: none;
         -webkit-user-select: none;
         border-radius: 8px;
+        /* Performance: layout containment */
+        contain: layout style;
+    }
+
+    /* When map is zoomed, disable scroll passthrough */
+    .wm-wrapper.wm-zoomed {
+        touch-action: none;
+    }
+
+    /* Loading placeholder */
+    .wm-wrapper.wm-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    }
+
+    .wm-loader {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #cbd5e1;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: wm-spin 1s linear infinite;
+    }
+
+    @keyframes wm-spin {
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     /* Transparent Buttons (Glassmorphism) */
@@ -87,6 +114,8 @@
         display: block;
         transform-origin: 0 0;
         shape-rendering: geometricPrecision;
+        /* Performance: GPU acceleration hint */
+        will-change: transform;
     }
 
     .wm-wrapper path {
@@ -140,12 +169,23 @@
         gap: 8px;
         z-index: 10;
     }
+
+    /* Hide controls until initialized */
+    .wm-loading .wm-controls,
+    .wm-loading .wm-viewport,
+    .wm-loading .wm-tooltip {
+        display: none;
+    }
 </style>
 
-<div class="wm-wrapper" id="wm-root" data-visited-label="{{ i18n "world_map_visited" | default (i18n "visited" | default "(Visited)") }}">
+<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n " world_map_visited" | default
+    (i18n "visited" | default "(Visited)" ) }}">
     <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
     <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
     <div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
+
+    <!-- Loading spinner (shown until lazy init) -->
+    <div class="wm-loader" id="wm-loader"></div>
 
     <div class="wm-viewport" id="wm-viewport">
         {{ $svg := resources.Get "images/world.svg" }}
@@ -166,109 +206,179 @@
 
 <script>
     (function () {
-        const state = { scale: 1, x: 0, y: 0, isDragging: false };
-        const MIN_SCALE = 1, MAX_SCALE = 20;
-        const COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
+        'use strict';
 
+        // Cache all DOM elements once
         const root = document.getElementById('wm-root');
+        if (!root) return;
+
         const viewport = document.getElementById('wm-viewport');
-        const svgLayer = viewport.querySelector('svg');
+        const svgLayer = viewport ? viewport.querySelector('svg') : null;
         const tt = document.getElementById('wm-tooltip');
+        const loader = document.getElementById('wm-loader');
+        const btnZoomIn = document.getElementById('wm-btn-zoom-in');
+        const btnZoomOut = document.getElementById('wm-btn-zoom-out');
 
         if (!svgLayer) return;
 
-        if (!svgLayer.hasAttribute('viewBox')) svgLayer.setAttribute('viewBox', '0 0 2000 857');
-        svgLayer.removeAttribute('width');
-        svgLayer.removeAttribute('height');
+        // State
+        const state = { scale: 1, x: 0, y: 0, isDragging: false, initialized: false };
+        const MIN_SCALE = 1, MAX_SCALE = 20;
+        const COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
 
-        let visited = {}, names = {}, isos = {};
-        try {
-            visited = JSON.parse(document.getElementById('wm-data-visit').dataset.json);
-            names = JSON.parse(document.getElementById('wm-data-map').dataset.json);
-            isos = JSON.parse(document.getElementById('wm-data-iso').dataset.json);
-        } catch (e) { console.error("Map Data Error:", e); }
-
-        // Click tracking for distinguishing drag from click
+        // Click tracking
         let startX = 0, startY = 0;
 
-        viewport.querySelectorAll('path').forEach(p => {
-            let iso = p.id?.length === 2 ? p.id.toUpperCase() : null;
-            let n = p.getAttribute('name');
-            if (!n && !iso) {
-                const cls = p.getAttribute('class') || "";
-                if (cls.length > 2) n = cls.replace("land", "").trim();
-            }
-            if (n) n = n.replace(/_/g, " ").trim();
-            if (n && !iso) iso = names[n];
+        // Pointer tracking
+        const pointers = new Map();
+        let lastDist = 0, lastCenter = { x: 0, y: 0 };
 
-            let disp = n || iso;
-            if (iso && isos[iso]) disp = isos[iso];
-            p.dataset.disp = disp || "";
-
-            if (iso && visited[iso]) {
-                p.classList.add('wm-visited');
-                const hash = (iso || "x").split("").reduce((a, b) => a + b.charCodeAt(0), 0);
-                p.style.fill = COLORS[hash % COLORS.length];
-                p.dataset.link = visited[iso].link;
-                p.dataset.visitedName = visited[iso].name;
-            }
-        });
-
+        // RAF optimization
         let rafId = null;
-        function requestUpdate() { if (!rafId) rafId = requestAnimationFrame(render); }
+
+        // --- Lazy initialization with Intersection Observer ---
+        function initMap() {
+            if (state.initialized) return;
+            state.initialized = true;
+
+            // Remove loading state
+            root.classList.remove('wm-loading');
+            if (loader) loader.style.display = 'none';
+
+            // Setup SVG
+            if (!svgLayer.hasAttribute('viewBox')) {
+                svgLayer.setAttribute('viewBox', '0 0 2000 857');
+            }
+            svgLayer.removeAttribute('width');
+            svgLayer.removeAttribute('height');
+
+            // Parse data once
+            let visited = {}, names = {}, isos = {};
+            try {
+                const visitEl = document.getElementById('wm-data-visit');
+                const mapEl = document.getElementById('wm-data-map');
+                const isoEl = document.getElementById('wm-data-iso');
+                if (visitEl) visited = JSON.parse(visitEl.dataset.json);
+                if (mapEl) names = JSON.parse(mapEl.dataset.json);
+                if (isoEl) isos = JSON.parse(isoEl.dataset.json);
+            } catch (e) {
+                console.error("World Map: Data parse error", e);
+            }
+
+            // Process paths once
+            const paths = viewport.querySelectorAll('path');
+            paths.forEach(p => {
+                let iso = p.id && p.id.length === 2 ? p.id.toUpperCase() : null;
+                let n = p.getAttribute('name');
+
+                if (!n && !iso) {
+                    const cls = p.getAttribute('class') || "";
+                    if (cls.length > 2) n = cls.replace("land", "").trim();
+                }
+                if (n) n = n.replace(/_/g, " ").trim();
+                if (n && !iso) iso = names[n];
+
+                let disp = n || iso;
+                if (iso && isos[iso]) disp = isos[iso];
+                p.dataset.disp = disp || "";
+
+                if (iso && visited[iso]) {
+                    p.classList.add('wm-visited');
+                    const hash = (iso || "x").split("").reduce((a, b) => a + b.charCodeAt(0), 0);
+                    p.style.fill = COLORS[hash % COLORS.length];
+                    p.dataset.link = visited[iso].link;
+                    p.dataset.visitedName = visited[iso].name;
+                }
+            });
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Initial resize
+            resizeMap();
+            setTimeout(resizeMap, 300);
+        }
+
+        // --- Render ---
+        function requestUpdate() {
+            if (!rafId) rafId = requestAnimationFrame(render);
+        }
+
         function render() {
             svgLayer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
             rafId = null;
         }
 
-        function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
-        function zoom(factor, relativeCenterX, relativeCenterY) {
-            if (relativeCenterX === undefined) {
+        // --- Zoom ---
+        function clamp(val, min, max) {
+            return Math.min(Math.max(val, min), max);
+        }
+
+        function zoom(factor, cx, cy) {
+            if (cx === undefined) {
                 const rect = root.getBoundingClientRect();
-                relativeCenterX = rect.width / 2;
-                relativeCenterY = rect.height / 2;
+                cx = rect.width / 2;
+                cy = rect.height / 2;
             }
             const oldScale = state.scale;
             const newScale = clamp(oldScale * factor, MIN_SCALE, MAX_SCALE);
             if (newScale === oldScale) return;
-            const wx = (relativeCenterX - state.x) / oldScale;
-            const wy = (relativeCenterY - state.y) / oldScale;
-            state.x = relativeCenterX - (wx * newScale);
-            state.y = relativeCenterY - (wy * newScale);
+
+            const wx = (cx - state.x) / oldScale;
+            const wy = (cy - state.y) / oldScale;
+            state.x = cx - (wx * newScale);
+            state.y = cy - (wy * newScale);
             state.scale = newScale;
+
+            // Update touch-action based on zoom level
+            if (newScale > 1) {
+                root.classList.add('wm-zoomed');
+            } else {
+                root.classList.remove('wm-zoomed');
+            }
+
             requestUpdate();
         }
 
-        const headers = new Map();
-        let lastDist = 0, lastCenter = { x: 0, y: 0 };
-        function getCenter(pointers) {
+        // --- Pointer helpers ---
+        function getCenter(ptrs) {
             let x = 0, y = 0, count = 0;
-            for (const p of pointers.values()) { x += p.x; y += p.y; count++; }
+            for (const p of ptrs.values()) { x += p.x; y += p.y; count++; }
             return { x: x / count, y: y / count };
         }
-        function getDist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
 
+        function getDist(p1, p2) {
+            return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        }
+
+        // --- Event Handlers ---
         function onPointerDown(e) {
             if (e.button !== 0 && e.pointerType === 'mouse') return;
             root.setPointerCapture(e.pointerId);
-            headers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
             state.isDragging = true;
-            if (headers.size === 2) {
-                const points = Array.from(headers.values());
-                lastDist = getDist(points[0], points[1]);
+
+            if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                lastDist = getDist(pts[0], pts[1]);
             }
-            lastCenter = getCenter(headers);
+            lastCenter = getCenter(pointers);
+
+            if (e.isPrimary || pointers.size === 1) {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
         }
-        root.addEventListener('pointerdown', onPointerDown);
 
         function onPointerMove(e) {
-            if (e.pointerType === 'mouse') {
-                const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('path');
-                if (t && (t.dataset.visitedName || t.dataset.disp)) {
-                    tt.textContent = t.dataset.visitedName || t.dataset.disp;
-                    if (t.classList.contains('wm-visited')) {
-                        const label = root.dataset.visitedLabel || "(Visited)";
-                        tt.textContent += " " + label;
+            // Tooltip for mouse
+            if (e.pointerType === 'mouse' && tt) {
+                const t = document.elementFromPoint(e.clientX, e.clientY);
+                const path = t ? t.closest('path') : null;
+                if (path && (path.dataset.visitedName || path.dataset.disp)) {
+                    tt.textContent = path.dataset.visitedName || path.dataset.disp;
+                    if (path.classList.contains('wm-visited')) {
+                        tt.textContent += " " + (root.dataset.visitedLabel || "(Visited)");
                     }
                     tt.classList.add('wm-show');
                     const rect = root.getBoundingClientRect();
@@ -277,16 +387,19 @@
                     tt.classList.remove('wm-show');
                 }
             }
-            if (!headers.has(e.pointerId)) return;
-            headers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-            const currentCenter = getCenter(headers);
+
+            if (!pointers.has(e.pointerId)) return;
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            const currentCenter = getCenter(pointers);
             const dx = currentCenter.x - lastCenter.x;
             const dy = currentCenter.y - lastCenter.y;
             state.x += dx;
             state.y += dy;
-            if (headers.size === 2) {
-                const points = Array.from(headers.values());
-                const currentDist = getDist(points[0], points[1]);
+
+            if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                const currentDist = getDist(pts[0], pts[1]);
                 if (lastDist > 0) {
                     const rect = root.getBoundingClientRect();
                     zoom(currentDist / lastDist, currentCenter.x - rect.left, currentCenter.y - rect.top);
@@ -297,75 +410,89 @@
             }
             lastCenter = currentCenter;
         }
-        root.addEventListener('pointermove', onPointerMove);
 
         function onPointerUp(e) {
-            headers.delete(e.pointerId);
+            pointers.delete(e.pointerId);
             try { root.releasePointerCapture(e.pointerId); } catch (err) { }
+
             const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-            if (headers.size === 0) {
+            if (pointers.size === 0) {
                 state.isDragging = false;
                 if (dist < 10) {
                     const target = document.elementFromPoint(e.clientX, e.clientY);
-                    const t = target?.closest('.wm-visited');
-                    if (t && t.dataset.link) window.location.href = t.dataset.link;
+                    const t = target ? target.closest('.wm-visited') : null;
+                    if (t && t.dataset.link) {
+                        window.location.href = t.dataset.link;
+                    }
                 }
             } else {
-                lastCenter = getCenter(headers);
+                lastCenter = getCenter(pointers);
                 lastDist = 0;
             }
         }
-        root.addEventListener('pointerup', onPointerUp);
-        root.addEventListener('pointercancel', e => { headers.delete(e.pointerId); state.isDragging = false; });
-        root.addEventListener('wheel', e => {
+
+        function onPointerCancel(e) {
+            pointers.delete(e.pointerId);
+            state.isDragging = false;
+        }
+
+        function onWheel(e) {
             e.preventDefault();
             const rect = root.getBoundingClientRect();
             zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
-        }, { passive: false });
+        }
 
-        document.getElementById('wm-btn-zoom-in').addEventListener('click', () => zoom(1.3));
-        document.getElementById('wm-btn-zoom-out').addEventListener('click', () => zoom(0.7));
+        function setupEventListeners() {
+            root.addEventListener('pointerdown', onPointerDown);
+            root.addEventListener('pointermove', onPointerMove);
+            root.addEventListener('pointerup', onPointerUp);
+            root.addEventListener('pointercancel', onPointerCancel);
+            root.addEventListener('wheel', onWheel, { passive: false });
 
-        root.addEventListener('pointerdown', e => {
-            if (e.isPrimary || headers.size === 0) { startX = e.clientX; startY = e.clientY; }
-        });
+            if (btnZoomIn) btnZoomIn.addEventListener('click', () => zoom(1.3));
+            if (btnZoomOut) btnZoomOut.addEventListener('click', () => zoom(0.7));
+
+            window.addEventListener('resize', resizeMap);
+        }
+
         // --- Dynamic Breakout Logic ---
         function resizeMap() {
             const articleContent = root.closest('.article-content') || root.parentElement;
+            if (!articleContent) return;
 
-            if (articleContent) {
-                const parentRect = articleContent.getBoundingClientRect();
-                const windowWidth = window.innerWidth;
+            const parentRect = articleContent.getBoundingClientRect();
+            const windowWidth = window.innerWidth;
+            const targetWidth = Math.min(windowWidth - 32, 1280);
 
-                // Target Width: 
-                // Unconstrained by 'main', we want a nice wide map on desktop.
-                // Cap at 1280px or window width - 32px (margins).
-                const targetWidth = Math.min(windowWidth - 32, 1280);
-
-                // Only activate breakout if the parent is narrower than our target
-                // (i.e. we are on desktop with a constrained text column)
-                if (parentRect.width < targetWidth) {
-                    // Calculate the position to center the map in the viewport
-                    const targetLeft = (windowWidth - targetWidth) / 2;
-
-                    // Calculate the necessary margin-left relative to the parent's current position
-                    const offsetLeft = targetLeft - parentRect.left;
-
-                    root.style.width = `${targetWidth}px`;
-                    root.style.marginLeft = `${offsetLeft}px`;
-                } else {
-                    // Mobile / Full width parent -> Reset
-                    root.style.width = '100%';
-                    root.style.marginLeft = '0';
-                }
+            if (parentRect.width < targetWidth) {
+                const targetLeft = (windowWidth - targetWidth) / 2;
+                const offsetLeft = targetLeft - parentRect.left;
+                root.style.width = targetWidth + 'px';
+                root.style.marginLeft = offsetLeft + 'px';
+            } else {
+                root.style.width = '100%';
+                root.style.marginLeft = '0';
             }
         }
 
-        window.addEventListener('resize', resizeMap);
-        // Run once on init and after a slight delay for layout stability
-        resizeMap();
-        setTimeout(resizeMap, 300);
-        setTimeout(resizeMap, 1000); // Extra safety for late layout shifts
+        // --- Intersection Observer for Lazy Loading ---
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        initMap();
+                        observer.disconnect();
+                    }
+                });
+            }, {
+                rootMargin: '100px',
+                threshold: 0.01
+            });
+            observer.observe(root);
+        } else {
+            // Fallback for older browsers
+            initMap();
+        }
 
     })();
 </script>
