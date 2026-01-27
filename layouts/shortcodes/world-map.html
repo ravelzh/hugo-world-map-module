@@ -23,11 +23,179 @@
 
 <style>
     /* Config */
-    {{- $P:=$site.Params.worldMap|default dict }}{{ $bgL:=$P.backgroundLight|default "#f0f9ff" }}{{ $bgD:=$P.backgroundDark|default "#1f2937" }}
-    {{- $fL:=$P.mapFillLight|default "#cbd5e1" }}{{ $fD:=$P.mapFillDark|default "#374151" }}{{ $str:=$P.mapStroke|default "white" }}{{ $tr:=$P.transparent|default false }}
-    :root{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgL }}{{ end }};--wm-map-fill:{{ $fL }};--wm-map-stroke:{{ $str }};--wm-btn-bg:rgba(255,255,255,0.6);--wm-btn-border:rgba(203,213,225,0.6);--wm-btn-text:#333;}
-    @media(prefers-color-scheme:dark){:root{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgD }}{{ end }};--wm-map-fill:{{ $fD }};--wm-btn-bg:rgba(31,41,55,0.6);--wm-btn-border:rgba(75,85,99,0.6);--wm-btn-text:#e5e7eb;}}
-    html.dark .wm-wrapper,.dark .wm-wrapper{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgD }}{{ end }};--wm-map-fill:{{ $fD }};--wm-btn-bg:rgba(31,41,55,0.6);--wm-btn-border:rgba(75,85,99,0.6);--wm-btn-text:#e5e7eb;}
+        {
+            {
+            - $P: =$site.Params.worldMap|default dict
+        }
+    }
+
+        {
+            {
+            $bgL: =$P.backgroundLight|default "#f0f9ff"
+        }
+    }
+
+        {
+            {
+            $bgD: =$P.backgroundDark|default "#1f2937"
+        }
+    }
+
+        {
+            {
+            - $fL: =$P.mapFillLight|default "#cbd5e1"
+        }
+    }
+
+        {
+            {
+            $fD: =$P.mapFillDark|default "#374151"
+        }
+    }
+
+        {
+            {
+            $str: =$P.mapStroke|default "white"
+        }
+    }
+
+        {
+            {
+            $tr: =$P.transparent|default false
+        }
+    }
+
+    /* Light mode (default) */
+    .wm-wrapper {
+        --wm-bg: {
+                {
+                if $tr
+            }
+        }
+
+        transparent {
+                {
+                else
+            }
+        }
+
+            {
+                {
+                $bgL
+            }
+        }
+
+            {
+                {
+                end
+            }
+        }
+
+        ;
+
+        --wm-map-fill: {
+                {
+                $fL
+            }
+        }
+
+        ;
+
+        --wm-map-stroke: {
+                {
+                $str
+            }
+        }
+
+        ;
+        --wm-btn-bg:rgba(255, 255, 255, 0.6);
+        --wm-btn-border:rgba(203, 213, 225, 0.6);
+        --wm-btn-text:#333;
+    }
+
+    /* Dark mode: System preference */
+    @media(prefers-color-scheme:dark) {
+        .wm-wrapper {
+            --wm-bg: {
+                    {
+                    if $tr
+                }
+            }
+
+            transparent {
+                    {
+                    else
+                }
+            }
+
+                {
+                    {
+                    $bgD
+                }
+            }
+
+                {
+                    {
+                    end
+                }
+            }
+
+            ;
+
+            --wm-map-fill: {
+                    {
+                    $fD
+                }
+            }
+
+            ;
+            --wm-btn-bg:rgba(31, 41, 55, 0.6);
+            --wm-btn-border:rgba(75, 85, 99, 0.6);
+            --wm-btn-text:#e5e7eb;
+        }
+    }
+
+    /* Dark mode: Class-based toggle (Blowfish, etc.) */
+    html.dark .wm-wrapper,
+    .dark .wm-wrapper {
+        --wm-bg: {
+                {
+                if $tr
+            }
+        }
+
+        transparent {
+                {
+                else
+            }
+        }
+
+            {
+                {
+                $bgD
+            }
+        }
+
+            {
+                {
+                end
+            }
+        }
+
+        ;
+
+        --wm-map-fill: {
+                {
+                $fD
+            }
+        }
+
+        ;
+        --wm-btn-bg:rgba(31, 41, 55, 0.6);
+        --wm-btn-border:rgba(75, 85, 99, 0.6);
+        --wm-btn-text:#e5e7eb;
+    }
+
     .wm-wrapper {
         position: relative;
         aspect-ratio: 2000 / 857;
