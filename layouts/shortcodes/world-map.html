@@ -1,222 +1,477 @@
-{{ $site := .Page.Site }}
-{{ $visitedData := dict }}
-{{ $countryMap := $site.Data.country_map }}
-{{ $taxonomiesToCheck := slice "destinationen" "destinations" }}
-{{ range $taxName := $taxonomiesToCheck }}
-{{ with index $site.Taxonomies $taxName }}
-{{ range $term, $pages := . }}
-{{ $termPage := $site.GetPage (printf "/%s/%s" $taxName $term) }}
-{{ if $termPage }}
-{{ $countryName := $termPage.Title }}
-{{ $link := $termPage.RelPermalink }}
-{{ $isoCode := index $countryMap $countryName }}
-{{ if not $isoCode }}{{ $isoCode = index $countryMap $term }}{{ end }}
-{{ if $isoCode }}
-{{ if not (index $visitedData $isoCode) }}
-{{ $visitedData = merge $visitedData (dict $isoCode (dict "name" $countryName "link" $link)) }}
-{{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
-
-{{- /* Config: Site params + Shortcode overrides */ -}}
+{{- $site := .Page.Site -}}
 {{- $P := $site.Params.worldMap | default dict -}}
-{{- $bgL := .Get "backgroundLight" | default ($P.backgroundLight | default "#f0f9ff") -}}
-{{- $bgD := .Get "backgroundDark" | default ($P.backgroundDark | default "#1f2937") -}}
-{{- $fL := .Get "mapFillLight" | default ($P.mapFillLight | default "#cbd5e1") -}}
-{{- $fD := .Get "mapFillDark" | default ($P.mapFillDark | default "#374151") -}}
+{{- $bgL := $P.backgroundLight | default "#f0f9ff" -}}
+{{- $bgD := $P.backgroundDark | default "#1f2937" -}}
+{{- $fL := $P.mapFillLight | default "#cbd5e1" -}}
+{{- $fD := $P.mapFillDark | default "#374151" -}}
 {{- $str := .Get "mapStroke" | default ($P.mapStroke | default "white") -}}
 {{- $tr := .Get "transparent" | default ($P.transparent | default false) -}}
 {{- $width := .Get "width" | default ($P.width | default "calc(100vw - 4rem)") -}}
 {{- $maxWidth := .Get "maxWidth" | default ($P.maxWidth | default "1024px") -}}
 {{- $borderRadius := .Get "borderRadius" | default ($P.borderRadius | default "8px") -}}
 
+{{- /* Prepare values for printf to ensure no formatter breaks the CSS */ -}}
+{{- $bgValL := $bgL }}{{- if $tr }}{{ $bgValL = "transparent" }}{{ end
+-}}
+{{- $bgValD := $bgD }}{{- if $tr }}{{ $bgValD = "transparent" }}{{ end
+-}}
+
+{{- $visitedData := dict -}}
+{{- $countryMap := $site.Data.country_map -}}
+{{- $taxonomiesToCheck := slice "destinationen" "destinations" -}}
+{{- range $taxName := $taxonomiesToCheck -}}
+{{- with index $site.Taxonomies $taxName -}}
+{{- range $term, $pages := . -}}
+{{- $termPage := $site.GetPage (printf "/%s/%s" $taxName $term) -}}
+{{- if $termPage -}}
+{{- $countryName := $termPage.Title -}}
+{{- $link := $termPage.RelPermalink -}}
+{{- $isoCode := index $countryMap $countryName -}}
+{{- if not $isoCode }}{{ $isoCode = index $countryMap $term }}{{ end -}}
+{{- if $isoCode -}}
+{{- if not (index $visitedData $isoCode) -}}
+{{- $visitedData = merge $visitedData (dict $isoCode (dict "name" $countryName "link" $link)) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 <style>
-.wm-wrapper{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgL }}{{ end }};--wm-map-fill:{{ $fL }};--wm-map-stroke:{{ $str }};--wm-btn-bg:rgba(255,255,255,0.6);--wm-btn-border:rgba(203,213,225,0.6);--wm-btn-text:#333;}
-@media(prefers-color-scheme:dark){.wm-wrapper{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgD }}{{ end }};--wm-map-fill:{{ $fD }};--wm-btn-bg:rgba(31,41,55,0.6);--wm-btn-border:rgba(75,85,99,0.6);--wm-btn-text:#e5e7eb;}}
-html.dark .wm-wrapper,.dark .wm-wrapper{--wm-bg:{{ if $tr }}transparent{{ else }}{{ $bgD }}{{ end }};--wm-map-fill:{{ $fD }};--wm-btn-bg:rgba(31,41,55,0.6);--wm-btn-border:rgba(75,85,99,0.6);--wm-btn-text:#e5e7eb;}
-.wm-wrapper{position:relative;aspect-ratio:2000/857;width:{{ $width }};max-width:{{ $maxWidth }};height:auto;margin-left:50%;transform:translateX(-50%);background:var(--wm-bg);overflow:hidden;border:1px solid var(--wm-map-fill);font-family:system-ui,-apple-system,sans-serif;touch-action:pan-y pinch-zoom;user-select:none;-webkit-user-select:none;border-radius:{{ $borderRadius }};contain:layout style;}
-.wm-wrapper.wm-zoomed{touch-action:none;}
-.wm-wrapper.wm-loading{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);}
-.wm-loader{width:40px;height:40px;border:3px solid var(--wm-map-fill);border-top-color:#3b82f6;border-radius:50%;animation:wm-spin 1s linear infinite;}
-@keyframes wm-spin{to{transform:rotate(360deg);}}
-.wm-btn{width:36px;height:36px;background:var(--wm-btn-bg);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:1px solid var(--wm-btn-border);border-radius:6px;font-weight:bold;font-size:18px;color:var(--wm-btn-text);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.05);display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
-.wm-btn:hover{background:rgba(255,255,255,0.9);}
-.wm-btn:active{background:#e2e8f0;}
-.wm-viewport{width:100%;height:100%;cursor:grab;transform-style:preserve-3d;}
-.wm-viewport:active{cursor:grabbing;}
-.wm-viewport svg{width:100%!important;height:100%!important;display:block;transform-origin:0 0;shape-rendering:geometricPrecision;}
-.wm-interacting svg{will-change:transform;}
-.wm-wrapper path{fill:var(--wm-map-fill);stroke:var(--wm-map-stroke);stroke-width:0.5px;vector-effect:non-scaling-stroke;transition:fill 0.2s ease;}
-.wm-visited{cursor:pointer;opacity:1!important;}
-.wm-visited:hover{filter:brightness(0.85);stroke:#333;}
-.wm-tooltip{position:absolute;top:0;left:0;background:rgba(255,255,255,0.95);color:#1a1a1a;padding:6px 10px;border:1px solid #cbd5e1;border-radius:4px;font-weight:500;font-size:0.9rem;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:1000;white-space:nowrap;transform:translate(10px,10px);}
-.wm-tooltip.wm-show{opacity:1;}
-.wm-controls{position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:10;}
-.wm-loading .wm-controls,.wm-loading .wm-viewport,.wm-loading .wm-tooltip{display:none;}
+    {{- printf ` .wm-wrapper {
+        --wm-bg: %s;
+        --wm-map-fill: %s;
+        --wm-map-stroke: %s;
+        --wm-btn-bg: rgba(255, 255, 255, 0.6);
+        --wm-btn-border: rgba(203, 213, 225, 0.6);
+        --wm-btn-text: #333;
+    }
+
+    html.dark .wm-wrapper,
+    .dark .wm-wrapper {
+        --wm-bg: %s;
+        --wm-map-fill: %s;
+        --wm-btn-bg: rgba(31, 41, 55, 0.6);
+        --wm-btn-border: rgba(75, 85, 99, 0.6);
+        --wm-btn-text: #e5e7eb;
+    }
+
+    .wm-wrapper {
+        width: %s;
+        max-width: %s;
+        border-radius: %s;
+    }
+
+    ` $bgValL $fL $str $bgValD $fD $width $maxWidth $borderRadius | safeCSS }} .wm-wrapper {
+        position: relative;
+        aspect-ratio: 2000 / 857;
+        height: auto;
+        margin-left: 50%;
+        transform: translateX(-50%);
+        background: var(--wm-bg);
+        overflow: hidden;
+        border: 1px solid var(--wm-map-fill);
+        font-family: system-ui, -apple-system, sans-serif;
+        touch-action: pan-y pinch-zoom;
+        user-select: none;
+        -webkit-user-select: none;
+        contain: layout style;
+    }
+
+    .wm-wrapper.wm-zoomed {
+        touch-action: none;
+    }
+
+    .wm-wrapper.wm-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    }
+
+    .wm-loader {
+        width: 40px;
+        height: 40px;
+        border: 3px solid var(--wm-map-fill);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: wm-spin 1s linear infinite;
+    }
+
+    @keyframes wm-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .wm-btn {
+        width: 36px;
+        height: 36px;
+        background: var(--wm-btn-bg);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: 1px solid var(--wm-btn-border);
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 18px;
+        color: var(--wm-btn-text);
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .wm-btn:hover {
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    .wm-btn:active {
+        background: #e2e8f0;
+    }
+
+    .wm-viewport {
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+        transform-style: preserve-3d;
+    }
+
+    .wm-viewport:active {
+        cursor: grabbing;
+    }
+
+    .wm-viewport svg {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+        transform-origin: 0 0;
+        shape-rendering: geometricPrecision;
+    }
+
+    .wm-interacting svg {
+        will-change: transform;
+    }
+
+    .wm-wrapper path {
+        fill: var(--wm-map-fill);
+        stroke: var(--wm-map-stroke);
+        stroke-width: 0.5px;
+        vector-effect: non-scaling-stroke;
+        transition: fill 0.2s ease;
+    }
+
+    .wm-visited {
+        cursor: pointer;
+        opacity: 1 !important;
+    }
+
+    .wm-visited:hover {
+        filter: brightness(0.85);
+        stroke: #333;
+    }
+
+    .wm-tooltip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: rgba(255, 255, 255, 0.95);
+        color: #1a1a1a;
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        z-index: 1000;
+        white-space: nowrap;
+        transform: translate(10px, 10px);
+    }
+
+    .wm-tooltip.wm-show {
+        opacity: 1;
+    }
+
+    .wm-controls {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 10;
+    }
+
+    .wm-loading .wm-controls,
+    .wm-loading .wm-viewport,
+    .wm-loading .wm-tooltip {
+        display: none;
+    }
 </style>
 
-<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n "world_map_visited" | default (i18n "visited" | default "(Visited)") }}">
-<div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
-<div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
-<div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
-<div class="wm-loader" id="wm-loader"></div>
-<div class="wm-viewport" id="wm-viewport">
-{{ $svg := resources.Get "images/world.svg" }}
-{{ if $svg }}{{ $svg.Content | safeHTML }}{{ else }}<p style="color:red">World Map SVG not found in assets/images/world.svg</p>{{ end }}
-</div>
-<div class="wm-tooltip" id="wm-tooltip"></div>
-<div class="wm-controls">
-<button class="wm-btn" id="wm-btn-zoom-in" aria-label="Zoom In">+</button>
-<button class="wm-btn" id="wm-btn-zoom-out" aria-label="Zoom Out">-</button>
-</div>
+<div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n " world_map_visited" | default
+    (i18n "visited" | default "(Visited)" ) }}">
+    <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
+    <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
+    <div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}"
+        style="display:none"></div>
+
+    <div class="wm-loader" id="wm-loader"></div>
+
+    <div class="wm-viewport" id="wm-viewport">
+        {{- $svg := resources.Get "images/world.svg" -}}
+        {{- if $svg -}}
+        {{- $svg.Content | safeHTML -}}
+        {{- else -}}
+        <p style="color:red">World Map SVG not found in assets/images/world.svg</p>
+        {{- end -}}
+    </div>
+
+    <div class="wm-tooltip" id="wm-tooltip"></div>
+
+    <div class="wm-controls">
+        <button class="wm-btn" id="wm-btn-zoom-in" aria-label="Zoom In">+</button>
+        <button class="wm-btn" id="wm-btn-zoom-out" aria-label="Zoom Out">-</button>
+    </div>
 </div>
 
 <script>
-(function(){
-'use strict';
-var root=document.getElementById('wm-root');
-if(!root)return;
-var viewport=document.getElementById('wm-viewport');
-var svgLayer=viewport?viewport.querySelector('svg'):null;
-var tt=document.getElementById('wm-tooltip');
-var loader=document.getElementById('wm-loader');
-var btnZoomIn=document.getElementById('wm-btn-zoom-in');
-var btnZoomOut=document.getElementById('wm-btn-zoom-out');
-if(!svgLayer)return;
-var state={scale:1,x:0,y:0,isDragging:false,initialized:false};
-var MIN_SCALE=1,MAX_SCALE=20;
-var COLORS=['#ef4444','#f97316','#eab308','#84cc16','#10b981','#06b6d4','#3b82f6','#8b5cf6','#d946ef','#f43f5e'];
-var startX=0,startY=0;
-var pointers=new Map();
-var lastDist=0,lastCenter={x:0,y:0};
-var rafId=null;
+    (function () {
+        'use strict';
+        const root = document.getElementById('wm-root');
+        if (!root) return;
+        const viewport = document.getElementById('wm-viewport');
+        const svgLayer = viewport ? viewport.querySelector('svg') : null;
+        const tt = document.getElementById('wm-tooltip');
+        const loader = document.getElementById('wm-loader');
+        const btnZoomIn = document.getElementById('wm-btn-zoom-in');
+        const btnZoomOut = document.getElementById('wm-btn-zoom-out');
+        if (!svgLayer) return;
 
-function initMap(){
-if(state.initialized)return;
-state.initialized=true;
-root.classList.remove('wm-loading');
-if(loader)loader.style.display='none';
-if(!svgLayer.hasAttribute('viewBox'))svgLayer.setAttribute('viewBox','0 0 2000 857');
-svgLayer.removeAttribute('width');
-svgLayer.removeAttribute('height');
-var visited={},names={},isos={};
-try{
-var visitEl=document.getElementById('wm-data-visit');
-var mapEl=document.getElementById('wm-data-map');
-var isoEl=document.getElementById('wm-data-iso');
-if(visitEl)visited=JSON.parse(visitEl.dataset.json);
-if(mapEl)names=JSON.parse(mapEl.dataset.json);
-if(isoEl)isos=JSON.parse(isoEl.dataset.json);
-}catch(e){console.error("World Map: Data parse error",e);}
-viewport.querySelectorAll('path').forEach(function(p){
-var iso=p.id&&p.id.length===2?p.id.toUpperCase():null;
-var n=p.getAttribute('name');
-if(!n&&!iso){var cls=p.getAttribute('class')||"";if(cls.length>2)n=cls.replace("land","").trim();}
-if(n)n=n.replace(/_/g," ").trim();
-if(n&&!iso)iso=names[n];
-var disp=n||iso;
-if(iso&&isos[iso])disp=isos[iso];
-p.dataset.disp=disp||"";
-if(iso&&visited[iso]){
-p.classList.add('wm-visited');
-var hash=(iso||"x").split("").reduce(function(a,b){return a+b.charCodeAt(0);},0);
-p.style.fill=COLORS[hash%COLORS.length];
-p.dataset.link=visited[iso].link;
-p.dataset.visitedName=visited[iso].name;
-}
-});
-setupEventListeners();
-}
+        const state = { scale: 1, x: 0, y: 0, isDragging: false, initialized: false };
+        const MIN_SCALE = 1, MAX_SCALE = 20;
+        const COLORS = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
 
-function requestUpdate(){if(!rafId)rafId=requestAnimationFrame(render);}
-function render(){svgLayer.style.transform='translate('+state.x+'px,'+state.y+'px) scale('+state.scale+')';rafId=null;}
-function clamp(val,min,max){return Math.min(Math.max(val,min),max);}
-function zoom(factor,cx,cy){
-if(cx===undefined){var rect=root.getBoundingClientRect();cx=rect.width/2;cy=rect.height/2;}
-var oldScale=state.scale;
-var newScale=clamp(oldScale*factor,MIN_SCALE,MAX_SCALE);
-if(newScale===oldScale)return;
-var wx=(cx-state.x)/oldScale;
-var wy=(cy-state.y)/oldScale;
-state.x=cx-(wx*newScale);
-state.y=cy-(wy*newScale);
-state.scale=newScale;
-if(newScale>1)root.classList.add('wm-zoomed');else root.classList.remove('wm-zoomed');
-requestUpdate();
-}
-function getCenter(ptrs){var x=0,y=0,count=0;ptrs.forEach(function(p){x+=p.x;y+=p.y;count++;});return{x:x/count,y:y/count};}
-function getDist(p1,p2){return Math.hypot(p2.x-p1.x,p2.y-p1.y);}
-var interactionTimeout=null;
-function startInteraction(){if(interactionTimeout){clearTimeout(interactionTimeout);interactionTimeout=null;}viewport.classList.add('wm-interacting');}
-function endInteraction(){if(interactionTimeout)clearTimeout(interactionTimeout);interactionTimeout=setTimeout(function(){viewport.classList.remove('wm-interacting');interactionTimeout=null;},150);}
+        let startX = 0, startY = 0;
+        const pointers = new Map();
+        let lastDist = 0, lastCenter = { x: 0, y: 0 };
+        let rafId = null;
 
-function onPointerDown(e){
-if(e.button!==0&&e.pointerType==='mouse')return;
-startInteraction();
-root.setPointerCapture(e.pointerId);
-pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-state.isDragging=true;
-if(pointers.size===2){var pts=Array.from(pointers.values());lastDist=getDist(pts[0],pts[1]);}
-lastCenter=getCenter(pointers);
-if(e.isPrimary||pointers.size===1){startX=e.clientX;startY=e.clientY;}
-}
+        function initMap() {
+            if (state.initialized) return;
+            state.initialized = true;
+            root.classList.remove('wm-loading');
+            if (loader) loader.style.display = 'none';
 
-function onPointerMove(e){
-if(e.pointerType==='mouse'&&tt){
-var t=document.elementFromPoint(e.clientX,e.clientY);
-var path=t?t.closest('path'):null;
-if(path&&(path.dataset.visitedName||path.dataset.disp)){
-tt.textContent=path.dataset.visitedName||path.dataset.disp;
-if(path.classList.contains('wm-visited'))tt.textContent+=" "+(root.dataset.visitedLabel||"(Visited)");
-tt.classList.add('wm-show');
-var rect=root.getBoundingClientRect();
-tt.style.transform='translate('+(e.clientX-rect.left+15)+'px,'+(e.clientY-rect.top+15)+'px)';
-}else{tt.classList.remove('wm-show');}
-}
-if(!pointers.has(e.pointerId))return;
-pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-var currentCenter=getCenter(pointers);
-state.x+=currentCenter.x-lastCenter.x;
-state.y+=currentCenter.y-lastCenter.y;
-if(pointers.size===2){
-var pts=Array.from(pointers.values());
-var currentDist=getDist(pts[0],pts[1]);
-if(lastDist>0){var rect=root.getBoundingClientRect();zoom(currentDist/lastDist,currentCenter.x-rect.left,currentCenter.y-rect.top);}
-lastDist=currentDist;
-}else{requestUpdate();}
-lastCenter=currentCenter;
-}
+            if (!svgLayer.hasAttribute('viewBox')) {
+                svgLayer.setAttribute('viewBox', '0 0 2000 857');
+            }
+            svgLayer.removeAttribute('width');
+            svgLayer.removeAttribute('height');
 
-function onPointerUp(e){
-pointers.delete(e.pointerId);
-try{root.releasePointerCapture(e.pointerId);}catch(err){}
-var dist=Math.hypot(e.clientX-startX,e.clientY-startY);
-if(pointers.size===0){
-state.isDragging=false;
-endInteraction();
-if(dist<10){var target=document.elementFromPoint(e.clientX,e.clientY);var t=target?target.closest('.wm-visited'):null;if(t&&t.dataset.link)window.location.href=t.dataset.link;}
-}else{lastCenter=getCenter(pointers);lastDist=0;}
-}
+            let visited = {}, names = {}, isos = {};
+            try {
+                const visitEl = document.getElementById('wm-data-visit');
+                const mapEl = document.getElementById('wm-data-map');
+                const isoEl = document.getElementById('wm-data-iso');
+                if (visitEl) visited = JSON.parse(visitEl.dataset.json);
+                if (mapEl) names = JSON.parse(mapEl.dataset.json);
+                if (isoEl) isos = JSON.parse(isoEl.dataset.json);
+            } catch (e) {
+                console.error("World Map: Data parse error", e);
+            }
 
-function onPointerCancel(e){pointers.delete(e.pointerId);state.isDragging=false;}
-function onWheel(e){e.preventDefault();startInteraction();var rect=root.getBoundingClientRect();zoom(e.deltaY>0?0.9:1.1,e.clientX-rect.left,e.clientY-rect.top);endInteraction();}
+            const paths = viewport.querySelectorAll('path');
+            paths.forEach(p => {
+                let iso = p.id && p.id.length === 2 ? p.id.toUpperCase() : null;
+                let n = p.getAttribute('name');
+                if (!n && !iso) {
+                    const cls = p.getAttribute('class') || "";
+                    if (cls.length > 2) n = cls.replace("land", "").trim();
+                }
+                if (n) n = n.replace(/_/g, " ").trim();
+                if (n && !iso) iso = names[n];
 
-function setupEventListeners(){
-root.addEventListener('pointerdown',onPointerDown);
-root.addEventListener('pointermove',onPointerMove);
-root.addEventListener('pointerup',onPointerUp);
-root.addEventListener('pointercancel',onPointerCancel);
-root.addEventListener('wheel',onWheel,{passive:false});
-if(btnZoomIn)btnZoomIn.addEventListener('click',function(){zoom(1.3);});
-if(btnZoomOut)btnZoomOut.addEventListener('click',function(){zoom(0.7);});
-}
+                let disp = n || iso;
+                if (iso && isos[iso]) disp = isos[iso];
+                p.dataset.disp = disp || "";
 
-if('IntersectionObserver' in window){
-var observer=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){initMap();observer.disconnect();}});},{rootMargin:'100px',threshold:0.01});
-observer.observe(root);
-}else{initMap();}
-})();
+                if (iso && visited[iso]) {
+                    p.classList.add('wm-visited');
+                    const hash = (iso || "x").split("").reduce((a, b) => a + b.charCodeAt(0), 0);
+                    p.style.fill = COLORS[hash % COLORS.length];
+                    p.dataset.link = visited[iso].link;
+                    p.dataset.visitedName = visited[iso].name;
+                }
+            });
+
+            setupEventListeners();
+            resizeMap();
+            setTimeout(resizeMap, 300);
+        }
+
+        function requestUpdate() {
+            if (!rafId) rafId = requestAnimationFrame(render);
+        }
+
+        function render() {
+            svgLayer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+            rafId = null;
+        }
+
+        function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
+
+        function zoom(factor, cx, cy) {
+            if (cx === undefined) {
+                const rect = root.getBoundingClientRect();
+                cx = rect.width / 2;
+                cy = rect.height / 2;
+            }
+            const oldScale = state.scale;
+            const newScale = clamp(oldScale * factor, MIN_SCALE, MAX_SCALE);
+            if (newScale === oldScale) return;
+
+            const wx = (cx - state.x) / oldScale;
+            const wy = (cy - state.y) / oldScale;
+            state.x = cx - (wx * newScale);
+            state.y = cy - (wy * newScale);
+            state.scale = newScale;
+
+            if (newScale > 1) {
+                root.classList.add('wm-zoomed');
+            } else {
+                root.classList.remove('wm-zoomed');
+            }
+            requestUpdate();
+        }
+
+        function getCenter(ptrs) {
+            let x = 0, y = 0, count = 0;
+            for (const p of ptrs.values()) { x += p.x; y += p.y; count++; }
+            return { x: x / count, y: y / count };
+        }
+
+        function getDist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
+
+        let interactionTimeout = null;
+        function startInteraction() {
+            if (interactionTimeout) { clearTimeout(interactionTimeout); interactionTimeout = null; }
+            viewport.classList.add('wm-interacting');
+        }
+        function endInteraction() {
+            if (interactionTimeout) clearTimeout(interactionTimeout);
+            interactionTimeout = setTimeout(() => {
+                viewport.classList.remove('wm-interacting');
+                interactionTimeout = null;
+            }, 150);
+        }
+
+        function onPointerDown(e) {
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+            startInteraction();
+            root.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            state.isDragging = true;
+            if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                lastDist = getDist(pts[0], pts[1]);
+            }
+            lastCenter = getCenter(pointers);
+            if (e.isPrimary || pointers.size === 1) { startX = e.clientX; startY = e.clientY; }
+        }
+
+        function onPointerMove(e) {
+            if (e.pointerType === 'mouse' && tt) {
+                const t = document.elementFromPoint(e.clientX, e.clientY);
+                const path = t ? t.closest('path') : null;
+                if (path && (path.dataset.visitedName || path.dataset.disp)) {
+                    tt.textContent = path.dataset.visitedName || path.dataset.disp;
+                    if (path.classList.contains('wm-visited')) {
+                        tt.textContent += " " + (root.dataset.visitedLabel || "(Visited)");
+                    }
+                    tt.classList.add('wm-show');
+                    const rect = root.getBoundingClientRect();
+                    tt.style.transform = `translate(${e.clientX - rect.left + 15}px, ${e.clientY - rect.top + 15}px)`;
+                } else {
+                    tt.classList.remove('wm-show');
+                }
+            }
+            if (!pointers.has(e.pointerId)) return;
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            const currentCenter = getCenter(pointers);
+            const dx = currentCenter.x - lastCenter.x;
+            const dy = currentCenter.y - lastCenter.y;
+            state.x += dx;
+            state.y += dy;
+            if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                const currentDist = getDist(pts[0], pts[1]);
+                if (lastDist > 0) {
+                    const rect = root.getBoundingClientRect();
+                    zoom(currentDist / lastDist, currentCenter.x - rect.left, currentCenter.y - rect.top);
+                }
+                lastDist = currentDist;
+            } else {
+                requestUpdate();
+            }
+            lastCenter = currentCenter;
+        }
+
+        function onPointerUp(e) {
+            pointers.delete(e.pointerId);
+            try { root.releasePointerCapture(e.pointerId); } catch (err) { }
+            const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+            if (pointers.size === 0) {
+                state.isDragging = false;
+                endInteraction();
+                if (dist < 10) {
+                    const target = document.elementFromPoint(e.clientX, e.clientY);
+                    const t = target ? target.closest('.wm-visited') : null;
+                    if (t && t.dataset.link) { window.location.href = t.dataset.link; }
+                }
+            } else {
+                lastCenter = getCenter(pointers);
+                lastDist = 0;
+            }
+        }
+
+        function onPointerCancel(e) { pointers.delete(e.pointerId); state.isDragging = false; }
+
+        function onWheel(e) {
+            e.preventDefault();
+            startInteraction();
+            const rect = root.getBoundingClientRect();
+            zoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - rect.left, e.clientY - rect.top);
+            endInteraction();
+        }
+
+        function setupEventListeners() {
+            root.addEventListener('pointerdown', onPointerDown);
+            root.addEventListener('pointermove', onPointerMove);
+            root.addEventListener('pointerup', onPointerUp);
+            root.addEventListener('pointercancel', onPointerCancel);
+            root.addEventListener('wheel', onWheel, { passive: false });
+            if (btnZoomIn) btnZoomIn.addEventListener('click', () => zoom(1.3));
+            if (btnZoomOut) btnZoomOut.addEventListener('click', () => zoom(0.7));
+            window.addEventListener('resize', resizeMap);
+        }
+
+        function resizeMap() { }
+
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) { initMap(); observer.disconnect(); }
+                });
+            }, { rootMargin: '100px', threshold: 0.01 });
+            observer.observe(root);
+        } else {
+            initMap();
+        }
+    })();
 </script>
