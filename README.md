@@ -1,31 +1,31 @@
-# Hugo World Map Module
+# World Map for Hugo
 
-Interactive SVG world map for Hugo. Highlights visited countries based on taxonomy terms.
+Interactive SVG world map module for Hugo. Automatically highlights visited countries based on taxonomy terms.
 
 **Demo:** [go-offroad.ch/map](https://go-offroad.ch/map)
 
 ## Features
 
-- 🚀 Lazy loading & 60fps performance
-- 📱 Pinch-to-zoom & pan on mobile
-- ↔️ Full-width responsive layout
-- 🔗 Auto-links taxonomy terms to countries
-- 🎨 Sharp SVG at any zoom level
-- 🔒 Self-hosted, no tracking
+- 🚀 **High Performance:** GPU-accelerated, lazy loading, optimized with Hugo Pipes (minified CSS/JS).
+- 📱 **Mobile Ready:** Touch-friendly pinch-to-zoom and panning.
+- 🎨 **Themable:** Native Dark Mode support and transparent backgrounds.
+- 🔗 **Smart Linking:** Auto-links countries to your content pages.
 
 ## Installation
 
-### 1. Add the module
+**Requirements:** Hugo Extended v0.120.0+ (Golang 1.20+)
+
+### 1. Add Module
+
+Add to your `hugo.toml`:
 
 ```toml
-# hugo.toml
 [module]
   [[module.imports]]
     path = "github.com/ravelzh/hugo-world-map-module"
 
 [taxonomies]
-  destinationen = "destinationen"  # German
-  # OR: destinations = "destinations"  # English
+  destinationen = "destinationen"  # or "destinations"
 ```
 
 ### 2. Download
@@ -37,37 +37,65 @@ hugo mod tidy
 
 ## Usage
 
+Simply add the shortcode to any page:
+
 ```go
 {{< world-map >}}
 ```
 
-The map automatically finds taxonomy terms in `destinationen` or `destinations` and colors the matching countries.
+### Customization
 
-### Create content with destinations
+You can configure the map via `hugo.toml` (global) or shortcode parameters (page-specific).
 
-```markdown
----
-title: "Albania Trip"
-destinationen:
-  - Albanien
----
+#### Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `transparent` | Bool | `false` | Removes background and border. |
+| `dropShadow` | Bool | `false` | Adds a drop-shadow (ideal for transparent mode). |
+| `width` | String | `calc(100vw - 4rem)` | Map width. |
+| `maxWidth` | String | `1024px` | Maximum width constraint. |
+| `mapStrokeLight` | Color | `black` | Border color in Light Mode. |
+| `mapStrokeDark` | Color | `white` | Border color in Dark Mode. |
+| `mapFillLight` | Color | `#cbd5e1` | Country fill color (Light). |
+| `mapFillDark` | Color | `#374151` | Country fill color (Dark). |
+
+#### Example: Transparent & Shadow
+
+```go
+{{< world-map transparent="true" dropShadow="true" >}}
 ```
 
-The module maps "Albanien" → ISO code "AL" → colors Albania on the map.
+#### Global Config (hugo.toml)
 
-## Configuration
+```toml
+[params.worldMap]
+  transparent = true
+  dropShadow = true
+  mapStrokeLight = "#333"
+  mapStrokeDark = "#eee"
+```
 
-See [USAGE.md](USAGE.md) for:
-- Custom country mappings
-- i18n translations
-- CSS customization
+## Content Mapping
 
-## Credits
+The map looks for terms in `destinationen` or `destinations`.
 
-SVG world map from [SimpleMaps](https://simplemaps.com/resources/svg-world) (free for commercial and personal use).
+**Example Content (`content/trips/albania.md`):**
+```yaml
+---
+title: "Trip to Albania"
+destinationen: ["Albanien"]
+---
+```
+*Result:* Albania is highlighted and linked.
+
+**Mappings:**
+- Standard: English/German names are built-in (e.g., "Switzerland", "Schweiz" -> CH).
+- Custom: Add to `data/country_map.yaml`:
+  ```yaml
+  "My Custom Name": "CH"
+  ```
 
 ## License
 
 Apache License 2.0 - [LICENSE](LICENSE)
-
-**Author:** Martin Vögeli ([@ravelzh](https://github.com/ravelzh))
