@@ -2,7 +2,7 @@
 
 Interactive SVG world map module for Hugo. Automatically highlights visited countries based on taxonomy terms.
 
-**Demo:** [go-offroad.ch/map](https://go-offroad.ch/map)
+**Demo:** [go-offroad.ch/en/destinations/](https://go-offroad.ch/en/destinations/)
 
 ## Features
 
@@ -44,59 +44,14 @@ Simply add the shortcode to any page:
 {{< world-map >}}
 ```
 
-### Customization
+See [USAGE.md](USAGE.md) for detailed configuration options (Parameters, Colors, Country Mapping).
 
-You can configure the map via `hugo.toml` (global) or shortcode parameters (page-specific).
+## Credits
 
-#### Options
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `transparent` | Bool | `false` | Removes background and border. |
-| `dropShadow` | Bool | `false` | Adds a drop-shadow (ideal for transparent mode). |
-| `width` | String | `calc(100vw - 4rem)` | Map width. |
-| `maxWidth` | String | `1024px` | Maximum width constraint. |
-| `mapStrokeLight` | Color | `black` | Border color in Light Mode. |
-| `mapStrokeDark` | Color | `white` | Border color in Dark Mode. |
-| `mapFillLight` | Color | `#cbd5e1` | Country fill color (Light). |
-| `mapFillDark` | Color | `#374151` | Country fill color (Dark). |
-
-#### Example: Transparent & Shadow
-
-```go
-{{< world-map transparent="true" dropShadow="true" >}}
-```
-
-#### Global Config (hugo.toml)
-
-```toml
-[params.worldMap]
-  transparent = true
-  dropShadow = true
-  mapStrokeLight = "#333"
-  mapStrokeDark = "#eee"
-```
-
-## Content Mapping
-
-The map looks for terms in `destinationen` or `destinations`.
-
-**Example Content (`content/trips/albania.md`):**
-```yaml
----
-title: "Trip to Albania"
-destinationen: ["Albanien"]
----
-```
-*Result:* Albania is highlighted and linked.
-
-**Mappings:**
-- Standard: English/German names are built-in (e.g., "Switzerland", "Schweiz" -> CH).
-- Custom: Add to `data/country_map.yaml`:
-  ```yaml
-  "My Custom Name": "CH"
-  ```
+SVG world map from [SimpleMaps](https://simplemaps.com/resources/svg-world) (free for commercial and personal use).
 
 ## License
 
 Apache License 2.0 - [LICENSE](LICENSE)
+
+**Author:** Martin Vögeli ([@ravelzh](https://github.com/ravelzh))
