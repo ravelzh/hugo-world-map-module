@@ -27,7 +27,9 @@ You can override settings directly in the shortcode:
 | `backgroundDark` | Dark mode background | `#1f2937` |
 | `mapFillLight` | Light mode country color | `#cbd5e1` |
 | `mapFillDark` | Dark mode country color | `#374151` |
-| `mapStroke` | Country border color | `white` |
+| `mapFillDark` | Dark mode country color | `#374151` |
+| `mapStrokeLight` | Light mode border color | `black` |
+| `mapStrokeDark` | Dark mode border color | `white` |
 
 ## Hugo Configuration
 
@@ -53,7 +55,9 @@ All shortcode parameters can also be set globally:
   backgroundDark  = "#1f2937"
   mapFillLight    = "#cbd5e1"
   mapFillDark     = "#374151"
-  mapStroke       = "white"
+  mapFillDark     = "#374151"
+  mapStrokeLight  = "black"
+  mapStrokeDark   = "white"
   transparent     = false
   dropShadow      = false
 ```

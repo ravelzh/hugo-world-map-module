@@ -4,7 +4,8 @@
 {{- $bgD := $P.backgroundDark | default "#1f2937" -}}
 {{- $fL := $P.mapFillLight | default "#cbd5e1" -}}
 {{- $fD := $P.mapFillDark | default "#374151" -}}
-{{- $str := .Get "mapStroke" | default ($P.mapStroke | default "white") -}}
+{{- $strL := .Get "mapStrokeLight" | default ($P.mapStrokeLight | default "black") -}}
+{{- $strD := .Get "mapStrokeDark" | default ($P.mapStrokeDark | default "white") -}}
 {{- $tr := .Get "transparent" | default ($P.transparent | default false) -}}
 {{- $dropShadow := .Get "dropShadow" | default ($P.dropShadow | default false) -}}
 {{- $width := .Get "width" | default ($P.width | default "calc(100vw - 4rem)") -}}
@@ -62,6 +63,7 @@
     .dark .wm-wrapper {
         --wm-bg: %s;
         --wm-map-fill: %s;
+        --wm-map-stroke: %s;
         --wm-btn-bg: rgba(31, 41, 55, 0.6);
         --wm-btn-border: rgba(75, 85, 99, 0.6);
         --wm-btn-text: #e5e7eb;
@@ -73,7 +75,7 @@
         border-radius: %s;
     }
 
-    ` $borderVal $shadowVal $bgValL $fL $str $bgValD $fD $width $maxWidth $borderRadius | safeCSS }} .wm-wrapper {
+    ` $borderVal $shadowVal $bgValL $fL $strL $bgValD $fD $strD $width $maxWidth $borderRadius | safeCSS }} .wm-wrapper {
         position: relative;
         aspect-ratio: 2000 / 857;
         height: auto;
