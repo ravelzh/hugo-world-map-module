@@ -22,6 +22,7 @@ You can override settings directly in the shortcode:
 | `maxWidth` | Maximum width | `1024px` |
 | `borderRadius` | Corner radius | `8px` |
 | `transparent` | Transparent background | `false` |
+| `dropShadow` | Enable map drop-shadow | `false` |
 | `backgroundLight` | Light mode background | `#f0f9ff` |
 | `backgroundDark` | Dark mode background | `#1f2937` |
 | `mapFillLight` | Light mode country color | `#cbd5e1` |
@@ -54,6 +55,7 @@ All shortcode parameters can also be set globally:
   mapFillDark     = "#374151"
   mapStroke       = "white"
   transparent     = false
+  dropShadow      = false
 ```
 
 ## Country Mapping

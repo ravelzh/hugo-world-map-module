@@ -6,6 +6,7 @@
 {{- $fD := $P.mapFillDark | default "#374151" -}}
 {{- $str := .Get "mapStroke" | default ($P.mapStroke | default "white") -}}
 {{- $tr := .Get "transparent" | default ($P.transparent | default false) -}}
+{{- $dropShadow := .Get "dropShadow" | default ($P.dropShadow | default false) -}}
 {{- $width := .Get "width" | default ($P.width | default "calc(100vw - 4rem)") -}}
 {{- $maxWidth := .Get "maxWidth" | default ($P.maxWidth | default "1024px") -}}
 {{- $borderRadius := .Get "borderRadius" | default ($P.borderRadius | default "8px") -}}
@@ -14,6 +15,13 @@
 {{- $bgValL := $bgL }}{{- if $tr }}{{ $bgValL = "transparent" }}{{ end
 -}}
 {{- $bgValD := $bgD }}{{- if $tr }}{{ $bgValD = "transparent" }}{{ end
+-}}
+
+{{- $borderVal := "1px solid var(--wm-map-fill)" -}}
+{{- if $tr }}{{ $borderVal = "none" }}{{ end -}}
+
+{{- $shadowVal := "none" -}}
+{{- if $dropShadow }}{{ $shadowVal = "drop-shadow(0 4px 6px rgba(0,0,0,0.3))" }}{{ end
 -}}
 
 {{- $visitedData := dict -}}
@@ -40,6 +48,8 @@
 
 <style>
     {{- printf ` .wm-wrapper {
+        --wm-border: %s;
+        --wm-shadow: %s;
         --wm-bg: %s;
         --wm-map-fill: %s;
         --wm-map-stroke: %s;
@@ -63,7 +73,7 @@
         border-radius: %s;
     }
 
-    ` $bgValL $fL $str $bgValD $fD $width $maxWidth $borderRadius | safeCSS }} .wm-wrapper {
+    ` $borderVal $shadowVal $bgValL $fL $str $bgValD $fD $width $maxWidth $borderRadius | safeCSS }} .wm-wrapper {
         position: relative;
         aspect-ratio: 2000 / 857;
         height: auto;
@@ -71,12 +81,16 @@
         transform: translateX(-50%);
         background: var(--wm-bg);
         overflow: hidden;
-        border: 1px solid var(--wm-map-fill);
+        border: var(--wm-border);
         font-family: system-ui, -apple-system, sans-serif;
         touch-action: pan-y pinch-zoom;
         user-select: none;
         -webkit-user-select: none;
         contain: layout style;
+    }
+
+    .wm-wrapper svg {
+        filter: var(--wm-shadow);
     }
 
     .wm-wrapper.wm-zoomed {
