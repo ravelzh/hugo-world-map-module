@@ -1,0 +1,155 @@
+.wm-wrapper {
+    position: relative;
+    aspect-ratio: 2000 / 857;
+    height: auto;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    background: var(--wm-bg);
+    overflow: hidden;
+    border: var(--wm-border);
+    padding-bottom: var(--wm-pb);
+    box-sizing: content-box;
+    font-family: system-ui, -apple-system, sans-serif;
+    touch-action: pan-y pinch-zoom;
+    user-select: none;
+    -webkit-user-select: none;
+    contain: layout style;
+}
+
+.wm-wrapper svg {
+    filter: var(--wm-shadow);
+}
+
+.wm-wrapper.wm-zoomed {
+    touch-action: none;
+}
+
+.wm-wrapper.wm-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.wm-loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--wm-map-fill);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: wm-spin 1s linear infinite;
+}
+
+@keyframes wm-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.wm-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--wm-btn-bg);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid var(--wm-btn-border);
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 18px;
+    color: var(--wm-btn-text);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.wm-btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.wm-btn:active {
+    background: #e2e8f0;
+}
+
+.wm-viewport {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    transform-style: preserve-3d;
+}
+
+.wm-viewport:active {
+    cursor: grabbing;
+}
+
+.wm-viewport svg {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    transform-origin: 0 0;
+    shape-rendering: geometricPrecision;
+}
+
+.wm-interacting svg {
+    will-change: transform;
+}
+
+.wm-wrapper path {
+    fill: var(--wm-map-fill);
+    stroke: var(--wm-map-stroke);
+    stroke-width: 0.5px;
+    vector-effect: non-scaling-stroke;
+    transition: fill 0.2s ease;
+}
+
+.wm-visited {
+    cursor: pointer;
+    opacity: 1 !important;
+}
+
+.wm-visited:hover {
+    filter: brightness(0.85);
+    stroke: #333;
+}
+
+.wm-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1a1a1a;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 1000;
+    white-space: nowrap;
+    transform: translate(10px, 10px);
+}
+
+.wm-tooltip.wm-show {
+    opacity: 1;
+}
+
+.wm-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+}
+
+.wm-loading .wm-controls,
+.wm-loading .wm-viewport,
+.wm-loading .wm-tooltip {
+    display: none;
+}
