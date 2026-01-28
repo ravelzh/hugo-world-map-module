@@ -25,7 +25,8 @@ Add to your `hugo.toml`:
     path = "github.com/ravelzh/hugo-world-map-module"
 
 [taxonomies]
-  destinationen = "destinationen"  # or "destinations"
+  destinations = "destinations"  # English
+  # OR: destinationen = "destinationen"  # German
 ```
 
 ### 2. Download
