@@ -1,7 +1,3 @@
-# Diese Datei verknüpft die Destinationen mit den ISO-Codes der SVG-Karte.
-# Links: Der exakte Titel deiner Hugo-Seite (z. B. "Albanien")
-# Rechts: Der 2-stellige ISO-Code (z. B. "AL")
-
 Afghanistan: "AF"
 Albania: "AL"
 Albanien: "AL"
