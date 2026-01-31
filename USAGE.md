@@ -29,6 +29,7 @@ You can override settings directly in the shortcode:
 | `mapStrokeDark` | Color | `white` | Border color in Dark Mode. |
 | `mapFillLight` | Color | `#cbd5e1` | Country fill color (Light). |
 | `mapFillDark` | Color | `#374151` | Country fill color (Dark). |
+| `taxonomies` | String | `destinations` | Comma-separated taxonomies. |
 
 ## Hugo Configuration
 
@@ -44,6 +45,8 @@ Settings can be defined globally in `hugo.toml`:
   dropShadow = false
   mapStrokeLight = "black"
   mapStrokeDark = "white"
+  # Data
+  taxonomies = ["destinationen", "destinations"] # Default taxonomies to scan
 ```
 
 ## Country Mapping

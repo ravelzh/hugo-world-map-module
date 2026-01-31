@@ -24,9 +24,13 @@ Add to your `hugo.toml`:
   [[module.imports]]
     path = "github.com/ravelzh/hugo-world-map-module"
 
+# Optional: Configure Taxonomies
+[params.worldMap]
+  taxonomies = ["destinations", "land"]
+
 [taxonomies]
-  destinations = "destinations"  # English
-  # OR: destinationen = "destinationen"  # German
+  destinations = "destinations"
+  land = "land" 
 ```
 
 ### 2. Download

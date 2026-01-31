@@ -28,8 +28,14 @@ $pbVal = "20px" }}{{ end -}}
 
 {{- $visitedData := dict -}}
 {{- $countryMap := $site.Data.country_map -}}
-{{- $taxonomiesToCheck := slice "destinationen" "destinations" -}}
-{{- range $taxName := $taxonomiesToCheck -}}
+{{- $checkTaxonomies := slice "destinationen" "destinations" -}}
+{{- if .Get "taxonomies" -}}
+{{- $checkTaxonomies = split (.Get "taxonomies") "," -}}
+{{- else if $P.taxonomies -}}
+{{- $checkTaxonomies = $P.taxonomies -}}
+{{- end -}}
+
+{{- range $taxName := $checkTaxonomies -}}
 {{- with index $site.Taxonomies $taxName -}}
 {{- range $term, $pages := . -}}
 {{- $termPage := $site.GetPage (printf "/%s/%s" $taxName $term) -}}
@@ -49,47 +55,49 @@ $pbVal = "20px" }}{{ end -}}
 {{- end -}}
 
 <style>
-    {{- printf ` .wm-wrapper {
-        --wm-border: %s;
-        --wm-shadow: %s;
-        --wm-pb: %s;
-        --wm-bg: %s;
-        --wm-map-fill: %s;
-        --wm-map-stroke: %s;
-        --wm-btn-bg: rgba(255, 255, 255, 0.6);
-        --wm-btn-border: rgba(203, 213, 225, 0.6);
-        --wm-btn-text: #333;
-    }
+    {
+            {
+            - printf ` .wm-wrapper {
+                --wm-border: %s;
+                --wm-shadow: %s;
+                --wm-pb: %s;
+                --wm-bg: %s;
+                --wm-map-fill: %s;
+                --wm-map-stroke: %s;
+                --wm-btn-bg: rgba(255, 255, 255, 0.6);
+                --wm-btn-border: rgba(203, 213, 225, 0.6);
+                --wm-btn-text: #333;
+            }
 
-    html.dark .wm-wrapper,
-    .dark .wm-wrapper {
-        --wm-bg: %s;
-        --wm-map-fill: %s;
-        --wm-map-stroke: %s;
-        --wm-btn-bg: rgba(31, 41, 55, 0.6);
-        --wm-btn-border: rgba(75, 85, 99, 0.6);
-        --wm-btn-text: #e5e7eb;
-    }
+            html.dark .wm-wrapper,
+            .dark .wm-wrapper {
+                --wm-bg: %s;
+                --wm-map-fill: %s;
+                --wm-map-stroke: %s;
+                --wm-btn-bg: rgba(31, 41, 55, 0.6);
+                --wm-btn-border: rgba(75, 85, 99, 0.6);
+                --wm-btn-text: #e5e7eb;
+            }
 
-    .wm-wrapper {
-        width: %s;
-        max-width: %s;
-        border-radius: %s;
-    }
+            .wm-wrapper {
+                width: %s;
+                max-width: %s;
+                border-radius: %s;
+            }
 
-    ` $borderVal $shadowVal $pbVal $bgValL $fL $strL $bgValD $fD $strD $width $maxWidth $borderRadius | safeCSS }}
+            ` $borderVal $shadowVal $pbVal $bgValL $fL $strL $bgValD $fD $strD $width $maxWidth $borderRadius | safeCSS
+        }
+    }
 </style>
 
 {{- $css := resources.Get "hugo-world-map-module/css/styles.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $css.RelPermalink | safeURL }}"
-    integrity="{{ $css.Data.Integrity }}">
+<link rel="stylesheet" href="{{ $css.RelPermalink | safeURL }}" integrity="{{ $css.Data.Integrity }}">
 
 <div class="wm-wrapper wm-loading" id="wm-root" data-visited-label="{{ i18n " world_map_visited" | default
     (i18n "visited" | default "(Visited)" ) }}">
     <div id="wm-data-visit" data-json="{{ $visitedData | jsonify }}" style="display:none"></div>
     <div id="wm-data-map" data-json="{{ $countryMap | jsonify }}" style="display:none"></div>
-    <div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}"
-        style="display:none"></div>
+    <div id="wm-data-iso" data-json="{{ $site.Data.iso_map | default dict | jsonify }}" style="display:none"></div>
 
     <div class="wm-loader" id="wm-loader"></div>
 
@@ -111,5 +119,4 @@ $pbVal = "20px" }}{{ end -}}
 </div>
 
 {{- $js := resources.Get "hugo-world-map-module/js/world-map.js" | minify | fingerprint -}}
-<script src="{{ $js.RelPermalink | safeURL }}" integrity="{{ $js.Data.Integrity }}"
-    defer></script>
+<script src="{{ $js.RelPermalink | safeURL }}" integrity="{{ $js.Data.Integrity }}" defer></script>
