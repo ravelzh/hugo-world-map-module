@@ -49,6 +49,28 @@ Settings can be defined globally in `hugo.toml`:
   taxonomies = ["destinationen", "destinations"] # Default taxonomies to scan
 ```
 
+## Configuration Example
+
+To display visited countries using a custom taxonomy (e.g., "land"):
+
+1. **Configure Hugo (`hugo.toml`):**
+   ```toml
+   [taxonomies]
+     land = "land"
+
+   [params.worldMap]
+     taxonomies = ["land"]
+   ```
+
+2. **Add Content:**
+   In your content file (e.g., `content/posts/morocco-trip.md`):
+   ```yaml
+   ---
+   title: "My Trip to Morocco"
+   land: ["Morocco"] # Must match the country name or mapped name
+   ---
+   ```
+
 ## Country Mapping
 
 The module maps taxonomy terms to ISO codes.
