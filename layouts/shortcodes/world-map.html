@@ -28,11 +28,9 @@ $pbVal = "20px" }}{{ end -}}
 
 {{- $visitedData := dict -}}
 {{- $countryMap := $site.Data.country_map -}}
-{{- $checkTaxonomies := slice "destinationen" "destinations" -}}
+{{- $checkTaxonomies := $P.taxonomies | default (slice "destinationen" "destinations") -}}
 {{- if .Get "taxonomies" -}}
-{{- $checkTaxonomies = split (.Get "taxonomies") "," -}}
-{{- else if $P.taxonomies -}}
-{{- $checkTaxonomies = $P.taxonomies -}}
+  {{- $checkTaxonomies = split (.Get "taxonomies") "," -}}
 {{- end -}}
 
 {{- range $taxName := $checkTaxonomies -}}
@@ -55,39 +53,35 @@ $pbVal = "20px" }}{{ end -}}
 {{- end -}}
 
 <style>
-    {
-            {
-            - printf ` .wm-wrapper {
-                --wm-border: %s;
-                --wm-shadow: %s;
-                --wm-pb: %s;
-                --wm-bg: %s;
-                --wm-map-fill: %s;
-                --wm-map-stroke: %s;
-                --wm-btn-bg: rgba(255, 255, 255, 0.6);
-                --wm-btn-border: rgba(203, 213, 225, 0.6);
-                --wm-btn-text: #333;
-            }
-
-            html.dark .wm-wrapper,
-            .dark .wm-wrapper {
-                --wm-bg: %s;
-                --wm-map-fill: %s;
-                --wm-map-stroke: %s;
-                --wm-btn-bg: rgba(31, 41, 55, 0.6);
-                --wm-btn-border: rgba(75, 85, 99, 0.6);
-                --wm-btn-text: #e5e7eb;
-            }
-
-            .wm-wrapper {
-                width: %s;
-                max-width: %s;
-                border-radius: %s;
-            }
-
-            ` $borderVal $shadowVal $pbVal $bgValL $fL $strL $bgValD $fD $strD $width $maxWidth $borderRadius | safeCSS -
-        }
+    {{- printf ` .wm-wrapper {
+        --wm-border: %s;
+        --wm-shadow: %s;
+        --wm-pb: %s;
+        --wm-bg: %s;
+        --wm-map-fill: %s;
+        --wm-map-stroke: %s;
+        --wm-btn-bg: rgba(255, 255, 255, 0.6);
+        --wm-btn-border: rgba(203, 213, 225, 0.6);
+        --wm-btn-text: #333;
     }
+
+    html.dark .wm-wrapper,
+    .dark .wm-wrapper {
+        --wm-bg: %s;
+        --wm-map-fill: %s;
+        --wm-map-stroke: %s;
+        --wm-btn-bg: rgba(31, 41, 55, 0.6);
+        --wm-btn-border: rgba(75, 85, 99, 0.6);
+        --wm-btn-text: #e5e7eb;
+    }
+
+    .wm-wrapper {
+        width: %s;
+        max-width: %s;
+        border-radius: %s;
+    }
+
+    ` $borderVal $shadowVal $pbVal $bgValL $fL $strL $bgValD $fD $strD $width $maxWidth $borderRadius | safeCSS -}}
 </style>
 
 {{- $css := resources.Get "hugo-world-map-module/css/styles.css" | minify | fingerprint -}}
