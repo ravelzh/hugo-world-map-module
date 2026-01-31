@@ -1,0 +1,34 @@
+baseURL = "http://localhost:1313/"
+languageCode = "de"
+title = "World Map Test"
+
+[markup.goldmark.renderer]
+  unsafe = true
+
+
+[params.worldMap]
+  taxonomies = ["land", "destinations"]
+
+[taxonomies]
+  destinationen = "destinationen"
+  land = "land"
+
+[module]
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "../layouts/shortcodes"
+    target = "layouts/shortcodes"
+  [[module.mounts]]
+    source = "../assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "../data"
+    target = "data"
+  [[module.mounts]]
+    source = "../i18n"
+    target = "i18n"
+  [[module.mounts]]
+    source = "content"
+    target = "content"

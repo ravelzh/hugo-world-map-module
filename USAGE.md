@@ -29,6 +29,7 @@ You can override settings directly in the shortcode:
 | `mapStrokeDark` | Color | `white` | Border color in Dark Mode. |
 | `mapFillLight` | Color | `#cbd5e1` | Country fill color (Light). |
 | `mapFillDark` | Color | `#374151` | Country fill color (Dark). |
+| `taxonomies` | String | `destinations` | Comma-separated taxonomies. |
 
 ## Hugo Configuration
 
@@ -44,7 +45,31 @@ Settings can be defined globally in `hugo.toml`:
   dropShadow = false
   mapStrokeLight = "black"
   mapStrokeDark = "white"
+  # Data
+  taxonomies = ["destinationen", "destinations"] # Default taxonomies to scan
 ```
+
+## Configuration Example
+
+To display visited countries using a custom taxonomy (e.g., "land"):
+
+1. **Configure Hugo (`hugo.toml`):**
+   ```toml
+   [taxonomies]
+     land = "land"
+
+   [params.worldMap]
+     taxonomies = ["land"]
+   ```
+
+2. **Add Content:**
+   In your content file (e.g., `content/posts/morocco-trip.md`):
+   ```yaml
+   ---
+   title: "My Trip to Morocco"
+   land: ["Morocco"] # Must match the country name or mapped name
+   ---
+   ```
 
 ## Country Mapping
 
