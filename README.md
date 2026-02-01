@@ -2,7 +2,7 @@
 
 Interactive SVG world map module for Hugo. Automatically highlights visited countries based on taxonomy terms.
 
-**Demo:** [go-offroad.ch/en/destinations/](https://go-offroad.ch/en/destinations/)
+**Demo:** [go-offroad.ch/countries/](https://go-offroad.ch/countries/)
 
 ## Features
 
